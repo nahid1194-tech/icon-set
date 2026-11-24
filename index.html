@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Icon to SVG</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f5f8;--panel:#fff;--ink:#14213d;--mute:#5d6b85;--line:#d5dbe6;--acc:#2447f5;--accfg:#fff;--grid:#e3e8f0;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1420;--panel:#171e2e;--ink:#e8edf8;--mute:#93a0ba;--line:#2a3550;--acc:#7b93ff;--accfg:#0f1420;--grid:#212b42;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Instrument Sans",system-ui,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:26px;margin:0 0 4px;font-weight:600;letter-spacing:-.01em}
+p.sub{margin:0 0 20px;color:var(--mute)}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:16px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
+input,select,textarea,button{font:inherit;color:var(--ink)}
+input[type=password],input[type=text],input[type=number],select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer}
+button.pri{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.drop:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.card h2{margin:0;padding:10px 14px;font-size:14px;font-weight:600;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.stage{aspect-ratio:1/1;display:grid;place-items:center;position:relative;background-color:var(--panel);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:20px 20px}
+.stage img{width:100%;height:100%;object-fit:contain}
+.svgbox{display:grid;place-items:center;color:var(--ink);width:100%;height:100%}
+.svgbox svg{width:100%;height:100%}
+.ov{position:absolute;inset:0;opacity:.4;pointer-events:none}
+.drop{cursor:pointer;text-align:center;color:var(--mute);padding:20px}
+.drop.over{background:var(--grid)}
+.tools{display:flex;flex-wrap:wrap;gap:14px;padding:12px 14px;border-top:1px solid var(--line);align-items:end}
+textarea{width:100%;height:210px;border:0;border-top:1px solid var(--line);background:var(--bg);padding:12px;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+#key{width:270px;height:62px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:6px 8px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;resize:vertical;-webkit-text-security:disc}
+.keys{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px;font-size:13px}
+.chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 10px}
+.chip.cur{border-color:var(--acc)}
+.dot{width:8px;height:8px;border-radius:50%;background:#2f9e44;display:inline-block}
+.chip.lim .dot{background:#f08c00}.chip.bad .dot{background:#d6336c}
+.queue{margin-bottom:16px}
+.qbtns{display:flex;gap:6px;flex-wrap:wrap}
+.qbtns button,#qlist button{padding:4px 10px;font-size:13px}
+#qlist{list-style:none;margin:0;padding:0;max-height:280px;overflow:auto}
+#qlist li{display:grid;grid-template-columns:22px 44px 1fr auto auto auto auto auto;gap:10px;align-items:center;padding:6px 12px;border-top:1px solid var(--line);cursor:pointer}
+#qlist li:first-child{border-top:0}
+#qlist li.sel{background:var(--grid)}
+#qlist img{width:44px;height:44px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px}
+#qlist .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.st{font-size:12px;color:var(--mute)}.st.done{color:#2f9e44}.st.err{color:#d6336c}.st.run{color:var(--acc)}
+.stage.pw{background:#fff;background-image:none}.stage.pw .svgbox{color:#14213d}
+.stage.pd{background:#111;background-image:none}.stage.pd .svgbox{color:#fff}
+.stage.pc{background-image:conic-gradient(#ccc 25%,#fff 0 50%,#ccc 0 75%,#fff 0);background-size:16px 16px}.stage.pc .svgbox{color:#14213d}
+.mini{display:flex;gap:8px;align-items:center;color:var(--ink);font-size:12px}
+.mini span{display:inline-flex}
+.sheetbox{padding:12px;overflow:auto;max-height:460px;background:var(--grid);border-top:1px solid var(--line)}
+.sheetbox svg{display:block;max-width:100%;height:auto;margin:0 auto}
+.hint{margin:-6px 0 16px;font-size:13px;color:var(--mute)}
+.msg{margin:12px 0 0;font-size:14px;min-height:20px}
+.msg.err{color:#d6336c}
+.full{margin-top:16px}
+.score{font-weight:600;color:var(--acc)}
+input[type=range]{accent-color:var(--acc)}
+input[type=color]{width:38px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px;background:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Icon to SVG</h1>
+  <p class="sub">Upload line icons. Gemini reads each image and writes editable stroke-based SVG code, then the app compares the result with the original and refines it automatically.</p>
+
+  <div class="bar">
+    <label>Gemini API keys (one per line)
+      <textarea id="key" rows="2" placeholder="AIza...key1&#10;AIza...key2" autocomplete="off" spellcheck="false"></textarea>
+    </label>
+    <label>Try this model first
+      <select id="model"><option value="auto">Auto (all models)</option></select>
+    </label>
+    <label style="flex-direction:row;align-items:center;gap:6px">
+      <input type="checkbox" id="fb" checked> Fall back to other models on failure
+    </label>
+    <button id="rl" title="Fetch the live model list from the API and reset skipped models">Model list refresh</button>
+    <label>Auto refine round
+      <select id="rounds"><option>0</option><option selected>1</option><option>2</option><option>3</option><option>4</option></select>
+    </label>
+    <label style="flex-direction:row;align-items:center;gap:6px">
+      <input type="checkbox" id="keepcol" checked> Keep original colors
+    </label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="crop" checked> Auto-crop</label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="notify" checked> Notify when done</label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="align" checked> Auto-align shapes</label>
+    <label>Stop at match %
+      <input type="number" id="good" value="80" min="40" max="99" style="width:72px">
+    </label>
+    <label>Minimum match %
+      <input type="number" id="minm" value="40" min="0" max="95" style="width:72px">
+    </label>
+    <label>Source
+      <select id="src"><option value="auto">Auto: trace first, Gemini if needed</option><option value="trace">Local trace only (no API)</option><option value="gemini">Gemini only</option></select>
+    </label>
+    <label>Mode
+      <select id="mode"><option value="fast">Fast (Flash first)</option><option value="best">Best (Pro first)</option></select>
+    </label>
+    <label>Images at once
+      <select id="conc"><option value="1">1 (one by one)</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select>
+    </label>
+    <label>OpenRouter key (backup, optional)
+      <input id="okey" type="password" placeholder="sk-or-..." autocomplete="off" size="16">
+    </label>
+    <label>Image size
+      <select id="res"><option value="512">512px</option><option value="768">768px (detail)</option><option value="1024">1024px (more detail)</option></select>
+    </label>
+    <label style="flex-direction:row;align-items:center;gap:6px">
+      <input type="checkbox" id="rem" checked> Remember keys
+    </label>
+    <button id="go" class="pri" disabled>Convert to code</button>
+    <button id="fix" disabled>Refine once more</button>
+    <button id="tracebtn" disabled title="Traces the stroke centre lines directly from the pixels. No API call.">Trace centerline (free)</button>
+    <button id="alignbtn" disabled title="Moves and resizes each shape to fit the original. No API call.">Align shapes (free)</button>
+  </div>
+  <div class="keys" id="keys" aria-live="polite"></div>
+  <p class="hint">If every model of one key fails, the next key is used automatically. Google counts quota per project, not per key, so extra keys only add quota if they come from different Google projects.</p>
+
+  <section class="card queue" id="queue" hidden>
+    <h2><span id="qtitle">Image queue</span>
+      <span class="qbtns">
+        <button id="add">+ Image</button>
+        <button id="all" class="pri">Convert all</button>
+        <button id="sel" disabled>Convert selected (0)</button>
+        <button id="retry" disabled>Retry low only (0)</button>
+        <button id="selall">Select all</button>
+        <button id="stop" disabled>Stop</button>
+        <button id="zip">All SVGs (ZIP)</button>
+        <button id="clr">Clear</button>
+      </span>
+    </h2>
+    <ul id="qlist"></ul>
+    <div class="tools">
+      <label>Stroke (24 grid) <input type="number" id="sw24" value="1.5" min="0.25" max="4" step="0.25" style="width:84px"></label>
+      <label>Decimal round <select id="dec"><option value="-1">Off</option><option value="1" selected>1 decimal</option><option value="2">2 decimal</option></select></label>
+      <button id="applyall">Apply style to all</button>
+      <button id="sprite">Sprite sheet</button>
+      <label>Split gap (px) <input type="number" id="sgap2" value="16" min="2" max="100" style="width:72px"></label>
+      <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="autosplit"> Auto-split multi-icon images</label>
+    </div>
+  </section>
+
+  <section class="card queue" id="sheetcard" hidden>
+    <h2>Sheet export: all icons in one SVG sheet
+      <span class="qbtns"><button id="sprev">Preview</button><button id="sdl" class="pri">Sheet SVG download</button></span>
+    </h2>
+    <div class="tools">
+      <label>Column <input type="number" id="scols" value="6" min="1" max="20" style="width:70px"></label>
+      <label>Cell size (px) <select id="scell"><option>96</option><option selected>128</option><option>160</option><option>200</option></select></label>
+      <label>Padding % <input type="number" id="spad" value="14" min="0" max="40" style="width:70px"></label>
+      <label>Gap (px) <input type="number" id="sgap" value="16" min="0" max="80" style="width:70px"></label>
+      <label>Fit <select id="sfit"><option value="bbox">Icon content (equal size)</option><option value="canvas">Original canvas</option></select></label>
+      <label>Stroke (px, 0 = keep own) <input type="number" id="ssw" value="0" min="0" max="12" step="0.25" style="width:84px"></label>
+      <label>Background <select id="sbg"><option value="none">None</option><option value="white">White</option><option value="dark">Dark</option></select></label>
+      <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="slab" checked> Name labels</label>
+    </div>
+    <div class="sheetbox" id="sheetbox" hidden></div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Before: original image</h2>
+      <div class="stage" id="beforeStage">
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="Image upload">
+          Drag and drop one or more images, click to browse, or paste (Ctrl+V)
+          <input id="file" type="file" accept="image/*" multiple hidden>
+        </div>
+        <img id="before" alt="Original icon" hidden>
+      </div>
+      <div class="tools"><label style="flex:1;min-width:0">Hint (optional, for this image)<input id="hint" type="text" placeholder="e.g. 3 rings on top, a pie chart and 3 lines below" style="width:100%"></label></div>
+    </section>
+
+    <section class="card">
+      <h2>After: SVG preview <span class="score" id="score"></span>
+        <label style="flex-direction:row;align-items:center;gap:6px;font-weight:400">
+          <input type="checkbox" id="ovl"> original overlay <input type="range" id="ovo" min="0.1" max="1" step="0.05" value="0.4" style="width:70px" aria-label="Overlay opacity">
+        </label>
+        <label style="flex-direction:row;align-items:center;gap:6px;font-weight:400"><input type="checkbox" id="dfm"> difference map</label>
+      </h2>
+      <div class="stage" id="afterStage">
+        <div class="svgbox" id="after"></div>
+        <img class="ov" id="ovimg" alt="" hidden>
+      </div>
+      <div class="tools">
+        <label>Stroke width <input type="range" id="sw" min="0.5" max="4" step="0.1" value="1.5"></label>
+        <label>Color <input type="color" id="sc" value="#14213d"></label>
+        <label>Cap
+          <select id="cap"><option>round</option><option>butt</option><option>square</option></select>
+        </label>
+        <label>Join
+          <select id="join"><option>round</option><option>miter</option><option>bevel</option></select>
+        </label>
+        <label>Background <select id="pbg"><option value="">Grid</option><option value="pw">White</option><option value="pd">Dark</option><option value="pc">Checker</option></select></label>
+        <div class="mini" aria-label="Small size preview">16 <span id="m16"></span> 24 <span id="m24"></span> 32 <span id="m32"></span></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card full">
+    <h2>SVG code (edit it and the preview updates live)
+      <span style="display:flex;gap:8px">
+        <select id="hist" title="Restore an earlier version" disabled><option>No versions</option></select>
+        <button id="clean">Code clean</button>
+        <button id="jsx" disabled>Copy JSX</button>
+        <button id="copy" disabled>Copy</button>
+        <button id="dl" class="pri" disabled>SVG download</button>
+      </span>
+    </h2>
+    <textarea id="code" spellcheck="false" placeholder="The generated code will appear here..."></textarea>
+  </section>
+  <p class="msg" id="msg" role="status"></p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let W = 512, H = 512, base = null, ink = null;
+try { $('key').value = localStorage.getItem('gkey') || ''; $('okey').value = localStorage.getItem('okey') || ''; } catch(e){}
+function saveKeys(){ try{ if($('rem').checked){ localStorage.setItem('gkey',$('key').value.trim()); localStorage.setItem('okey',$('okey').value.trim()); } else { localStorage.removeItem('gkey'); localStorage.removeItem('okey'); } }catch(e){} }
+['key','okey','rem'].forEach(id => $(id).addEventListener('change', saveKeys));
+function msg(t, err){ const m=$('msg'); m.textContent=t||''; m.className='msg'+(err?' err':''); }
+const cv = (w,h) => { const c=document.createElement('canvas'); c.width=w; c.height=h; return c; };
+const b64 = c => c.toDataURL('image/png').split(',')[1];
+const loadImg = url => new Promise((res,rej) => { const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+
+// ---------- image queue: many images, each normalised to max 512px on white ----------
+const items = []; let cur = null, uid = 0, stopFlag = false;
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function mask(c){
+  const d = c.getContext('2d').getImageData(0,0,c.width,c.height).data, m = new Uint8Array(c.width*c.height);
+  for(let p=0;p<m.length;p++) m[p] = d[p*4] < 140 ? 1 : 0;
+  return m;
+}
+function proc(im, res, rc){
+  const sw = rc ? rc.sw : im.naturalWidth, sh = rc ? rc.sh : im.naturalHeight, k = res/Math.max(sw, sh);
+  const w = Math.max(1, Math.round(sw*k)), h = Math.max(1, Math.round(sh*k));
+  const c = cv(w,h), x = c.getContext('2d', {willReadFrequently:true});
+  if(rc) x.drawImage(im, rc.sx, rc.sy, rc.sw, rc.sh, 0, 0, w, h); else x.drawImage(im, 0, 0, w, h);
+  const id = x.getImageData(0,0,w,h), a = id.data, n = w*h, st = new Float32Array(n);
+  let tr = 0; for(let i=3;i<a.length;i+=4) if(a[i] < 128) tr++;
+  if(tr > n*0.03){ for(let p=0;p<n;p++) st[p] = a[p*4+3]/255; } // transparent background: opaque pixels are the ink
+  else {
+    for(let i=0;i<a.length;i+=4){ const al = a[i+3]/255; for(let j=0;j<3;j++) a[i+j] = a[i+j]*al + 255*(1-al); }
+    // background = most common colour along the image border; ink = anything clearly different from it
+    const cnt = new Map(), edge = px => { const key = ((a[px]>>4)<<8)|((a[px+1]>>4)<<4)|(a[px+2]>>4); cnt.set(key, (cnt.get(key)||0)+1); };
+    for(let xx=0;xx<w;xx++) for(const yy of [0,1,h-2,h-1]) edge((Math.max(0,yy)*w+xx)*4);
+    for(let yy=0;yy<h;yy++) for(const xx of [0,1,w-2,w-1]) edge((yy*w+Math.max(0,xx))*4);
+    let bk = 0, bv = -1; cnt.forEach((v,key) => { if(v > bv){ bv = v; bk = key; } });
+    const br = ((bk>>8)&15)*16+8, bg = ((bk>>4)&15)*16+8, bb = (bk&15)*16+8;
+    for(let p=0;p<n;p++){ const i = p*4, d = Math.hypot(a[i]-br, a[i+1]-bg, a[i+2]-bb); st[p] = Math.min(1, Math.max(0, (d-30)/70)); }
+  }
+  let r = 0, g = 0, bl = 0, m = 0, x0 = w, y0 = h, x1 = -1, y1 = -1; // dominant ink colour + ink bounding box
+  for(let p=0;p<n;p++){
+    if(st[p] > 0.8){ r += a[p*4]; g += a[p*4+1]; bl += a[p*4+2]; m++; }
+    if(st[p] > 0.5){ const px = p%w, py = (p/w)|0; if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py; }
+  }
+  const color = m ? '#' + [r,g,bl].map(v => Math.round(v/m).toString(16).padStart(2,'0')).join('') : '#14213d';
+  for(let p=0;p<n;p++){ const v = 255*(1-st[p]), i = p*4; a[i] = a[i+1] = a[i+2] = v; a[i+3] = 255; } // normalise to black ink on white
+  x.putImageData(id,0,0);
+  return { c, w, h, color, rect: rc || null, bb: x1 < 0 ? null : { x0, y0, x1:x1+1, y1:y1+1 } };
+}
+// crop the image to the icon first, so the icon fills the picture Gemini sees (higher detail, better match)
+function prep(im, res, crop){
+  let r = proc(im, res, null);
+  if(crop && r.bb){
+    const { x0, y0, x1, y1 } = r.bb, bw = x1-x0, bh = y1-y0;
+    if(bw*bh < r.w*r.h*0.8){
+      const pad = Math.max(6, 0.08*Math.max(bw,bh)), f = im.naturalWidth/r.w;
+      const sx = Math.max(0, (x0-pad)*f), sy = Math.max(0, (y0-pad)*f);
+      const ex = Math.min(im.naturalWidth, (x1+pad)*f), ey = Math.min(im.naturalHeight, (y1+pad)*f);
+      r = proc(im, res, { sx, sy, sw: ex-sx, sh: ey-sy });
+    }
+  }
+  return r;
+}
+function thumbOf(im){
+  const k = 88/Math.max(im.naturalWidth, im.naturalHeight), c = cv(Math.max(1, Math.round(im.naturalWidth*k)), Math.max(1, Math.round(im.naturalHeight*k)));
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/png');
+}
+async function makeItem(url, name, res, crop){
+  if(crop === undefined) crop = $('crop').checked;
+  const im = await loadImg(url), p = prep(im, res, crop);
+  return { id:++uid, name, url, thumb:thumbOf(im), W:p.w, H:p.h, base:p.c, ink:mask(p.c), color:p.color, rect:p.rect, crop, res, status:'pending', code:'', score:0, model:'', err:'', hint:'', hist:[] };
+}
+async function addFiles(files){
+  const list = [...files].filter(f => f && f.type.startsWith('image/'));
+  if(!list.length) return msg('Please add image files only.', true);
+  for(const f of list){
+    const url = await new Promise(r => { const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); });
+    try{
+      const made = await makeItem(url, f.name || `image-${uid+1}.png`, +$('res').value);
+      const parts = $('autosplit').checked ? await splitItem(made) : null;
+      if(parts) items.push(...parts); else items.push(made);
+    }catch(e){ msg(`${f.name}: could not read this image.`, true); }
+  }
+  if(!cur && items.length) pick(items[0]); else renderQueue();
+  msg(`${items.length} image(s) in the queue. Click "Convert all" to convert them.`);
+}
+function pick(it){
+  if(cur) cur.code = $('code').value;
+  cur = it; W = it.W; H = it.H; base = it.base; ink = it.ink;
+  $('before').src = it.url; $('before').hidden = false; $('drop').hidden = true; $('ovimg').src = it.url;
+  $('code').value = it.code; syncControls(); render();
+  $('hint').value = it.hint || ''; fillHist();
+  $('score').textContent = it.code ? `Match ${Math.round(it.score*100)}%` : '';
+  $('go').disabled = busy || !base; $('tracebtn').disabled = busy || !cur;
+  renderQueue();
+}
+function clearView(){
+  cur = null; base = ink = null;
+  $('before').hidden = true; $('before').removeAttribute('src'); $('drop').hidden = false; $('ovimg').removeAttribute('src');
+  $('code').value = ''; $('score').textContent = ''; $('hint').value = ''; fillHist(); render(); $('go').disabled = true; $('tracebtn').disabled = true; msg('');
+}
+function removeItem(id){
+  const i = items.findIndex(x => x.id === id); if(i < 0 || busy) return;
+  const was = items[i] === cur; items.splice(i,1);
+  if(was){ cur = null; if(items.length) pick(items[Math.min(i, items.length-1)]); else clearView(); }
+  renderQueue();
+}
+const ST = { pending:['Pending',''], running:['Running...','run'], done:['Done','done'], low:['Low match','err'], error:['Error','err'] };
+function renderQueue(){
+  if(cur) cur.code = $('code').value;
+  $('queue').hidden = !items.length;
+  $('qtitle').textContent = `Image queue: ${items.filter(i=>i.status==='done').length}/${items.length} done`;
+  $('qlist').innerHTML = items.map(it => { const s = ST[it.status];
+    return `<li data-id="${it.id}" class="${it===cur?'sel':''}"><input type="checkbox" class="pick" aria-label="Select" ${it.sel?'checked':''}><img src="${it.thumb || it.url}" alt=""><span class="nm" title="${esc(it.name)}">${esc(it.name)}${it.err?`<br><small class="st err">${esc(it.err.slice(0,90))}</small>`:''}</span><span class="st ${s[1]}">${s[0]}${(it.status==='done'||it.status==='low')?' '+Math.round(it.score*100)+'%':''}</span><button data-act="sp" title="Split into separate icons" aria-label="Split">✂</button><button data-act="rn" aria-label="Rename" title="Rename">✎</button><button data-act="dl" ${it.code?'':'disabled'}>SVG</button><button data-act="rm" aria-label="Remove" ${busy?'disabled':''}>×</button></li>`; }).join('');
+  qButtons(); $('clr').disabled = busy;
+  $('zip').disabled = !items.some(i => i.code);
+  $('sheetcard').hidden = !items.some(i => i.code);
+  saveSoon();
+}
+function qButtons(){
+  const sel = items.filter(i => i.sel).length, low = items.filter(i => i.status === 'low' || i.status === 'error').length;
+  $('all').disabled = busy || !items.some(i => i.status !== 'done');
+  $('sel').disabled = busy || !sel; $('sel').textContent = `Convert selected (${sel})`;
+  $('retry').disabled = busy || !low; $('retry').textContent = `Retry low only (${low})`;
+  $('selall').textContent = items.length && items.every(i => i.sel) ? 'Select none' : 'Select all';
+  $('stop').disabled = !busy;
+}
+$('qlist').onclick = e => {
+  const li = e.target.closest('li'); if(!li) return;
+  const it = items.find(x => x.id == li.dataset.id); if(!it) return;
+  if(e.target.classList.contains('pick')){ it.sel = e.target.checked; qButtons(); saveSoon(); return; }
+  const act = e.target.closest('button')?.dataset.act;
+  if(act === 'sp') return doSplit(it);
+  if(act === 'rn'){ const n = prompt('New name', it.name); if(n && n.trim()){ it.name = n.trim(); renderQueue(); } return; }
+  if(act === 'dl') return dlItem(it);
+  if(act === 'rm') return removeItem(it.id);
+  pick(it);
+};
+$('add').onclick = () => $('file').click();
+$('clr').onclick = () => { if(busy) return; items.length = 0; clearView(); renderQueue(); };
+$('stop').onclick = () => { stopFlag = true; msg('Stopping... requests already in progress will finish first.'); };
+$('drop').onclick = () => $('file').click();
+$('drop').onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); $('file').click(); } };
+$('before').onclick = () => $('file').click();
+$('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+const st = $('beforeStage');
+st.ondragover = e => { e.preventDefault(); $('drop').classList.add('over'); };
+st.ondragleave = () => $('drop').classList.remove('over');
+st.ondrop = e => { e.preventDefault(); $('drop').classList.remove('over'); addFiles(e.dataTransfer.files); };
+addEventListener('paste', e => { const fs = [...e.clipboardData.items].filter(i => i.type.startsWith('image/')).map(i => i.getAsFile()); if(fs.length) addFiles(fs); });
+
+// ---------- helper images sent to Gemini ----------
+function gridImage(it){
+  const { W, H, base } = it;
+  const c = cv(W,H), x = c.getContext('2d');
+  x.drawImage(base,0,0);
+  for(let v=0; v<=Math.max(W,H); v+=32){
+    const big = v%64===0;
+    x.strokeStyle = big ? 'rgba(220,40,40,.55)' : 'rgba(220,40,40,.22)'; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(v,0); x.lineTo(v,H); x.moveTo(0,v); x.lineTo(W,v); x.stroke();
+    if(big){ x.fillStyle='#c01818'; x.font='11px sans-serif';
+      x.fillText(v, v+2, 11); x.fillText(v, v+2, H-3); x.fillText(v, 2, v-2); x.fillText(v, W-26, v-2); }
+  }
+  return c;
+}
+async function raster(text, it){
+  const { W, H } = it;
+  try{
+    const s = parseText(text); if(!s) return null;
+    s.setAttribute('width',W); s.setAttribute('height',H); s.setAttribute('stroke','#000');
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(s)], {type:'image/svg+xml'}));
+    const im = await loadImg(url); URL.revokeObjectURL(url);
+    const c = cv(W,H), x = c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,H); x.drawImage(im,0,0,W,H);
+    return c;
+  }catch(e){ return null; }
+}
+function compare(c, it, wantDiff = true){ // IoU score, plus a diff canvas only when needed
+  const { W, H, ink } = it, m = mask(c);
+  if(!wantDiff){ let i=0,u=0; for(let p=0;p<m.length;p++){ const a=ink[p], b=m[p]; if(a&&b){ i++; u++; } else if(a||b) u++; } return { score: u ? i/u : 0, diff:null }; }
+  const d = cv(W,H), x = d.getContext('2d'), id = x.createImageData(W,H);
+  let i=0,u=0;
+  for(let p=0;p<m.length;p++){
+    const a=ink[p], b=m[p]; let r=255,g=255,bl=255;
+    if(a&&b){ r=g=bl=160; i++; u++; } else if(a){ r=255; g=60; bl=60; u++; } else if(b){ r=60; g=100; bl=255; u++; }
+    id.data[p*4]=r; id.data[p*4+1]=g; id.data[p*4+2]=bl; id.data[p*4+3]=255;
+  }
+  x.putImageData(id,0,0);
+  return { score: u ? i/u : 0, diff: d };
+}
+
+// ---------- Gemini ----------
+const RULES = it => { const { W, H } = it; return `You convert a line icon into clean, editable stroke-based SVG that matches the image as exactly as possible.
+The image is ${W}x${H} pixels. Use viewBox="0 0 ${W} ${H}" so SVG coordinates equal image pixel coordinates. A second copy of the image has a pixel grid (thin red line every 32px, bold every 64px, labelled) so you can read exact coordinates.
+Method:
+1) Measure the line thickness T in pixels.
+2) List every distinct shape and its exact position and size.
+3) Write each as a stroke element whose geometry follows the CENTERLINE of the drawn line, i.e. inset by T/2 from the outer edge (never the outer edge itself).
+Rules:
+- Root: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" fill="none" stroke="currentColor" stroke-width="T" stroke-linecap="round" stroke-linejoin="round"> with T replaced by the measured number.
+- Use only <path>, <line>, <polyline>, <polygon>, <circle>, <ellipse>, <rect>, all unfilled.
+- Rounded rectangle outline: <rect rx>. Capsule or pill outline: hollow <rect> with rx equal to half its width. Never draw a hollow shape as one thick filled bar. Circles and partial circles: <circle> or path arcs (A command). Short bars with round ends: <line>.
+- A line that runs behind another shape must stop where it is hidden, exactly as in the image.
+- No outline tracing, no <image>, no fill, no filters. Do not set stroke attributes on child elements.
+- Wheels, hubs and dots are <circle> elements with equal horizontal and vertical radius (use <ellipse> only if the image really shows an ellipse). Concentric circles must share exactly the same centre.
+- Parts that touch or connect in the image must touch in the SVG (shared end points). Draw one connected outline as ONE <path> (closed with Z) instead of several loose lines. A hollow box is a closed <rect> or closed <path>, never two separate lines.
+- Keep the same positions, sizes, gaps, proportions and corner radii as the image.
+- Output ONLY the SVG code, no markdown, no explanation.`; };
+const hintTxt = it => it && it.hint ? '\nHint from the user about this icon (trust it): ' + it.hint : '';
+const part = c => ({ inline_data:{ mime_type:'image/png', data:b64(c) } });
+// ---------- keys, model list and automatic fallback ----------
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+const DEFAULT_MODELS = ['gemini-3.1-pro-preview','gemini-2.5-pro','gemini-3.5-flash','gemini-2.5-flash','gemini-3.1-flash-lite','gemini-2.5-flash-lite','gemini-2.0-flash','gemini-2.0-flash-lite'];
+let models = DEFAULT_MODELS.slice(), lastGood = null, lastModel = '';
+const keys = () => [...new Set($('key').value.split(/[\s,;]+/).map(k => k.trim()).filter(k => k.length > 15))];
+const kid = k => k.slice(-6);
+const deadMap = () => { try{ return JSON.parse(localStorage.getItem('gdead')||'{}'); }catch(e){ return {}; } };
+function markDead(k, m, ms){ const d=deadMap(); d[kid(k)+'|'+m]=Date.now()+ms; try{ localStorage.setItem('gdead', JSON.stringify(d)); }catch(e){} }
+function isDead(k, m){ const d=deadMap(), t=Date.now(); return (d[kid(k)+'|'+m]||0) > t || (d[kid(k)+'|*']||0) > t; }
+function rank(id){
+  const v = parseFloat((id.match(/gemini-(\d+(?:\.\d+)?)/)||[0,0])[1]);
+  const tier = /flash-lite/.test(id) ? 0 : /flash/.test(id) ? 1 : /pro/.test(id) ? 2 : 0;
+  return tier*100 + v;
+}
+function fillSelect(){
+  const cur = $('model').value;
+  $('model').innerHTML = '<option value="auto">Auto (all models)</option>' + models.map(m=>`<option value="${m}">${m}</option>`).join('');
+  $('model').value = [...$('model').options].some(o=>o.value===cur) ? cur : 'auto';
+}
+async function refreshModels(){
+  const ks = keys();
+  if(!ks.length) return msg('Add at least one API key first to load the live model list.', true);
+  let lastErr = '';
+  for(const k of ks){
+    try{
+      const res = await fetch(API+'/models?pageSize=200', { headers:{'x-goog-api-key':k} });
+      const j = await res.json(); if(!res.ok) throw new Error(j.error?.message || res.status);
+      const bad = /tts|image|embed|aqa|live|audio|robotics|computer|imagen|veo|gemma|learnlm|-latest|gemini-1\./;
+      const list = (j.models||[]).filter(m => /^models\/gemini-/.test(m.name) && (m.supportedGenerationMethods||[]).includes('generateContent') && !bad.test(m.name)).map(m => m.name.replace('models/',''));
+      if(list.length) models = [...new Set(list)].sort((a,b) => rank(b)-rank(a));
+      fillSelect();
+      return msg(`${ks.length} key(s), ${models.length} Gemini model(s) found. On failure the app tries other models, then other keys.`);
+    }catch(e){ lastErr = e.message; }
+  }
+  fillSelect(); msg('Could not load the live model list ('+lastErr+'). Using the built-in list.', true);
+}
+function modelOrder(best){
+  if(best || $('mode').value !== 'fast') return models;
+  const fl = m => /flash/.test(m) && !/lite/.test(m), pr = m => /pro/.test(m);
+  return [...models.filter(fl), ...models.filter(pr), ...models.filter(m => !fl(m) && !pr(m))];
+}
+function chain(wi, best){
+  const sel = $('model').value, ks = keys();
+  const fk = wi == null && lastGood && ks.includes(lastGood.key) ? lastGood.key : null;
+  const rot = ks.length ? (wi||0) % ks.length : 0;
+  const ordered = wi != null ? [...ks.slice(rot), ...ks.slice(0, rot)] : (fk ? [fk, ...ks.filter(k => k !== fk)] : ks);
+  const fm = sel !== 'auto' ? sel : null; // in Auto, order comes from the Fast/Best mode, so an earlier fallback model cannot override it
+  const out = [];
+  for(const k of ordered){
+    if(isDead(k,'*')) continue;
+    let list = modelOrder(best).filter(m => !isDead(k,m));
+    if(fm) list = [fm, ...list.filter(m => m !== fm)];
+    if(!$('fb').checked) list = list.slice(0,1);
+    list.forEach(m => out.push({ key:k, model:m }));
+  }
+  return out.length ? out : ordered.flatMap(k => models.map(m => ({ key:k, model:m })));
+}
+const orKey = () => $('okey').value.trim();
+let orModels = null;
+async function orGen(parts, tried, label, out){
+  const k = orKey(); if(!k) return null;
+  try{
+    if(!orModels){
+      const j = await (await fetch('https://openrouter.ai/api/v1/models')).json();
+      orModels = (j.data||[]).filter(m => (m.architecture?.input_modalities||[]).includes('image') && +m.pricing?.prompt === 0 && +m.pricing?.completion === 0).map(m => m.id).slice(0,6);
+    }
+  }catch(e){ tried.push('OpenRouter list: '+e.message); return null; }
+  const content = parts.map(p => p.text !== undefined ? { type:'text', text:p.text } : { type:'image_url', image_url:{ url:`data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } });
+  for(const m of orModels){
+    if(isDead(k,m)) continue;
+    msg(`${label||'Backup'} [OpenRouter ${m}]...`);
+    try{
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+k}, body:JSON.stringify({ model:m, messages:[{ role:'user', content }] }) });
+      const j = await res.json().catch(() => ({}));
+      if(!res.ok){ markDead(k, m, res.status===429 ? 65e3 : 36e5); tried.push(`${m}: ${j.error?.message || res.status}`.slice(0,90)); continue; }
+      const mm = (j.choices?.[0]?.message?.content || '').match(/<svg[\s\S]*<\/svg>/i);
+      if(!mm){ tried.push(`${m}: did not return valid SVG`); continue; }
+      lastModel = m + ' (OpenRouter)'; if(out) out.model = lastModel; return mm[0].trim();
+    }catch(e){ tried.push(`${m}: ${e.message}`); }
+  }
+  return null;
+}
+async function gem(parts, temp, label, wi, out){
+  const ks = keys();
+  if(!ks.length && !orKey()) throw new Error('Add at least one Gemini or OpenRouter API key first.');
+  const tried = [];
+  for(const { key, model:m } of chain(wi, out && out.best)){
+    const ki = ks.indexOf(key) + 1, tag = ks.length > 1 ? ` key ${ki}/${ks.length}` : '';
+    msg(`${label||'Working'} [${m}${tag}]...`);
+    try{
+      const cfg = m.startsWith('gemini-3') ? {} : { temperature: temp };
+      bump(key);
+      const res = await fetch(`${API}/models/${m}:generateContent`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-goog-api-key':key},
+        body: JSON.stringify({ contents:[{ parts }], generationConfig: cfg })
+      });
+      const j = await res.json().catch(() => ({}));
+      if(!res.ok){
+        const em = j.error?.message || ('HTTP '+res.status);
+        if(res.status === 429) bumpLim();
+        if((res.status===400 && /api key/i.test(em)) || (res.status===403 && /api key|leaked|suspend|disabled|consumer/i.test(em))){
+          markDead(key, '*', 24*36e5); tried.push(`key ${ki}: ${em.slice(0,70)}`); continue;
+        }
+        if(res.status===404 || res.status===403) markDead(key, m, 24*36e5);
+        else if(res.status===429) markDead(key, m, /limit:\s*0|per ?day/i.test(em) ? 6*36e5 : 65e3);
+        else if(res.status>=500) markDead(key, m, 30e3);
+        else markDead(key, m, 36e5);
+        tried.push(`${m}${tag}: ${em.slice(0,70)}`); continue;
+      }
+      const t = j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('') || '';
+      const mm = t.match(/<svg[\s\S]*<\/svg>/i);
+      if(!mm){ tried.push(`${m}${tag}: did not return valid SVG`); continue; }
+      lastGood = { key, model:m }; lastModel = m + (ks.length > 1 ? ` (key ${ki})` : ''); if(out) out.model = lastModel; renderKeys();
+      return mm[0].trim();
+    }catch(e){ tried.push(`${m}${tag}: ${e.message}`); }
+  }
+  const orr = await orGen(parts, tried, label, out); if(orr) return orr;
+  throw new Error('No model/key worked. ' + tried.slice(-8).join(' | '));
+}
+$('rl').onclick = () => { try{ localStorage.removeItem('gdead'); }catch(e){} refreshModels(); };
+$('key').addEventListener('change', refreshModels);
+fillSelect();
+if(keys().length) refreshModels();
+const today = () => new Date().toISOString().slice(0,10);
+let cnt = { d:today(), n:{}, t:0, lim:0 };
+try{ const c = JSON.parse(localStorage.getItem('greq')||'null'); if(c && c.d === today()) cnt = c; }catch(e){}
+const saveCnt = () => { try{ localStorage.setItem('greq', JSON.stringify(cnt)); }catch(e){} };
+function bump(k){ if(cnt.d !== today()) cnt = { d:today(), n:{}, t:0, lim:0 }; cnt.n[kid(k)] = (cnt.n[kid(k)]||0)+1; cnt.t++; saveCnt(); }
+const bumpLim = () => { cnt.lim++; saveCnt(); };
+const fmt = ms => { const s = Math.ceil(ms/1000); return s >= 3600 ? (Math.round(s/360)/10)+'h' : s >= 60 ? Math.ceil(s/60)+'m' : s+'s'; };
+function keyState(k){
+  const d = deadMap(), t = Date.now(), id = kid(k);
+  if((d[id+'|*']||0) > t) return { cls:'bad', txt:'Invalid/blocked' };
+  const alive = models.filter(m => !((d[id+'|'+m]||0) > t)).length;
+  if(!alive) return { cls:'lim', txt:'Limit, '+fmt(Math.min(...models.map(m => (d[id+'|'+m]||0) - t)))+' por active' };
+  return { cls:'', txt:`Active (${alive}/${models.length} model)` };
+}
+function renderKeys(){
+  const ks = keys(), box = $('keys');
+  if(!ks.length){ box.innerHTML = ''; return; }
+  const sts = ks.map(keyState), act = sts.filter(x => !x.cls).length;
+  box.innerHTML = `<strong>Active key: ${act}/${ks.length}</strong><span class="st">Today: ${cnt.t} requests, ${cnt.lim} rate-limit errors${orKey() ? ' · OpenRouter backup ready' : ''}</span>` + ks.map((k,i) =>
+    `<span class="chip ${sts[i].cls} ${lastGood && lastGood.key===k ? 'cur' : ''}"><i class="dot"></i>Key ${i+1} …${esc(kid(k))}: ${sts[i].txt}${cnt.n[kid(k)] ? ' · '+cnt.n[kid(k)]+' req today' : ''}</span>`).join('');
+}
+$('key').addEventListener('input', renderKeys);
+setInterval(renderKeys, 1000); renderKeys();
+const firstParts = it => [{text:RULES(it)+hintTxt(it)},{text:'Image A: original icon'},part(it.base),{text:'Image B: same icon with pixel grid'},part(gridImage(it))];
+const refineParts = (code, render, diff, it) => [
+  {text:RULES(it)+hintTxt(it)+`\n\nBelow are: Image A original icon, Image B my current SVG rendered at the same size, Image C a difference map (red = ink in the original that my SVG is missing, blue = extra ink my SVG has that the original does not, grey = correct). Fix every red and blue area: correct positions, sizes, stroke thickness, radii and missing or extra shapes. Return the full corrected SVG.\n\nCurrent SVG:\n${code}`},
+  {text:'Image A: original'}, part(it.base), {text:'Image B: current render'}, part(render), {text:'Image C: difference map'}, part(diff)
+];
+
+let busy = false;
+function lock(v){ busy = v; $('go').disabled = $('tracebtn').disabled = v || !cur; $('fix').disabled = $('alignbtn').disabled = v || !cur || !$('code').value.trim(); renderQueue(); }
+async function evalCode(code, it, wantDiff = true){
+  const c = await raster(code, it); if(!c) return { score:0, c:null, diff:null };
+  const r = compare(c, it, wantDiff); return { score:r.score, c, diff:r.diff };
+}
+// stroke thickness measured from the original (2 * ink area / edge pixels), no API call needed
+function strokeEst(it){
+  if(it.tEst) return it.tEst;
+  const { W, H, ink } = it; let a = 0, e = 0;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i = y*W+x; if(!ink[i]) continue; a++;
+    if(x===0||y===0||x===W-1||y===H-1||!ink[i-1]||!ink[i+1]||!ink[i-W]||!ink[i+W]) e++;
+  }
+  return it.tEst = e ? 2*a/e : 0;
+}
+// local search for the best stroke width (free, fast, improves match)
+// local alignment search: nudge the viewBox origin by a few pixels while the match improves (free, no API call)
+async function nudge(code, it, ev){
+  let best = { code, ev };
+  const sv0 = parseText(code); if(!sv0) return best;
+  const vb0 = (sv0.getAttribute('viewBox')||'').split(/[\s,]+/).map(Number);
+  if(vb0.length < 4 || vb0.some(isNaN)) return best;
+  const k = vb0[2]/it.W;
+  for(const step of [8,4,2]){
+    for(let pass=0; pass<2; pass++){
+      let moved = false;
+      for(const [dx,dy] of [[step,0],[-step,0],[0,step],[0,-step]]){
+        const sv = parseText(best.code), v = sv.getAttribute('viewBox').split(/[\s,]+/).map(Number);
+        sv.setAttribute('viewBox', `${+(v[0]+dx*k).toFixed(2)} ${+(v[1]+dy*k).toFixed(2)} ${v[2]} ${v[3]}`);
+        const c2 = new XMLSerializer().serializeToString(sv), e = await evalCode(c2, it, false);
+        if(e.score > best.ev.score + 0.002){ best = { code:c2, ev:e }; moved = true; }
+      }
+      if(!moved) break;
+    }
+  }
+  return best;
+}
+async function fitStroke(code, it, ev, deep = true){ // deep = also shift/align shapes (slower); light = stroke width only
+  const sn = snapConcentric(code);
+  if(sn !== code){ const e = await evalCode(sn, it, false); if(e.score >= ev.score - 0.01){ code = sn; ev = e; } }
+  let b = await fitStrokeW(code, it, ev);
+  if(deep && b.ev.score < 0.85){
+    b = await nudge(b.code, it, b.ev);
+    if($('align').checked && b.ev.score < 0.85){ b = await alignShapes(b.code, it, b.ev); b = await fitStrokeW(b.code, it, b.ev); }
+  }
+  if(!b.ev.diff) b = { code:b.code, ev: await evalCode(b.code, it) }; // one full evaluation (with diff map) for the winner only
+  return b;
+}
+// ---- per-shape alignment: Gemini often places shapes a few dozen px off. Move/resize each shape locally to fit the original.
+const GEO = /^(path|rect|circle|ellipse|line|polyline|polygon)$/;
+function xPath(d, f){
+  const t = d.match(/[a-zA-Z]|[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/g) || [], out = [], ar = { m:2, l:2, t:2, h:1, v:1, c:6, s:4, q:4, a:7, z:0 };
+  const num = v => +(+v).toFixed(3); let i = 0;
+  while(i < t.length){
+    const c = t[i++], k = c.toLowerCase(), abs = c === c.toUpperCase(), n = ar[k];
+    if(n === undefined) return d;
+    out.push(c); if(n === 0) continue;
+    while(i < t.length && !/[a-zA-Z]/.test(t[i])){
+      const a = t.slice(i, i+n).map(Number); i += n;
+      if(a.length < n || a.some(isNaN)) return d;
+      let r;
+      if(k === 'h') r = [abs ? f.sx*a[0]+f.tx : f.sx*a[0]];
+      else if(k === 'v') r = [abs ? f.sy*a[0]+f.ty : f.sy*a[0]];
+      else if(k === 'a') r = [a[0]*Math.abs(f.sx), a[1]*Math.abs(f.sy), a[2], a[3], a[4], abs ? f.sx*a[5]+f.tx : f.sx*a[5], abs ? f.sy*a[6]+f.ty : f.sy*a[6]];
+      else { r = []; for(let j=0;j<n;j+=2) r.push(abs ? f.sx*a[j]+f.tx : f.sx*a[j], abs ? f.sy*a[j+1]+f.ty : f.sy*a[j+1]); }
+      out.push(r.map(num).join(' '));
+    }
+  }
+  return out.join(' ');
+}
+function xEl(doc, el, f){
+  const n = el.localName, g = a => parseFloat(el.getAttribute(a)) || 0, r3 = v => +(+v).toFixed(3), set = (a, v) => el.setAttribute(a, r3(v));
+  const X = v => f.sx*v + f.tx, Y = v => f.sy*v + f.ty;
+  if(n === 'rect'){
+    const rx = el.getAttribute('rx'), ry = el.getAttribute('ry');
+    set('x', X(g('x'))); set('y', Y(g('y'))); set('width', g('width')*f.sx); set('height', g('height')*f.sy);
+    if(rx !== null || ry !== null){ const a = parseFloat(rx !== null ? rx : ry) || 0, b = parseFloat(ry !== null ? ry : rx) || 0; set('rx', a*f.sx); set('ry', b*f.sy); }
+  } else if(n === 'circle'){
+    if(Math.abs(f.sx - f.sy) < 1e-6){ set('cx', X(g('cx'))); set('cy', Y(g('cy'))); set('r', g('r')*f.sx); }
+    else {
+      const e = doc.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+      for(const a of [...el.attributes]) if(!['cx','cy','r'].includes(a.name)) e.setAttribute(a.name, a.value);
+      e.setAttribute('cx', r3(X(g('cx')))); e.setAttribute('cy', r3(Y(g('cy')))); e.setAttribute('rx', r3(g('r')*f.sx)); e.setAttribute('ry', r3(g('r')*f.sy));
+      el.replaceWith(e);
+    }
+  } else if(n === 'ellipse'){ set('cx', X(g('cx'))); set('cy', Y(g('cy'))); set('rx', g('rx')*f.sx); set('ry', g('ry')*f.sy); }
+  else if(n === 'line'){ set('x1', X(g('x1'))); set('y1', Y(g('y1'))); set('x2', X(g('x2'))); set('y2', Y(g('y2'))); }
+  else if(n === 'polyline' || n === 'polygon'){
+    const v = (el.getAttribute('points')||'').match(/[-+]?\d*\.?\d+/g) || [], o = [];
+    for(let j=0;j+1<v.length;j+=2) o.push(r3(X(+v[j])) + ',' + r3(Y(+v[j+1])));
+    el.setAttribute('points', o.join(' '));
+  } else if(n === 'path') el.setAttribute('d', xPath(el.getAttribute('d')||'', f));
+}
+function applyEl(code, i, f){
+  const sv = parseText(code); xEl(sv.ownerDocument, sv.children[i], f);
+  return new XMLSerializer().serializeToString(sv);
+}
+function shapeBoxes(code){
+  const sv = parseText(code), host = document.createElement('div');
+  host.style.cssText = 'position:absolute;left:-9999px;top:0;width:512px;height:512px;visibility:hidden';
+  const node = document.importNode(sv, true); node.setAttribute('width', 512); node.setAttribute('height', 512);
+  host.appendChild(node); document.body.appendChild(host);
+  const out = [...node.children].map(e => { try{ const b = e.getBBox(); return { x:b.x, y:b.y, width:b.width, height:b.height }; }catch(err){ return null; } });
+  host.remove(); return out;
+}
+// fast low-res, blurred comparison: smooth score so shapes that are a few strokes away still "feel" the original
+const QS = 200;
+function blurBox(a, w, h, r){
+  let src = a, tmp = new Float32Array(w*h), dst = new Float32Array(w*h);
+  for(let pass=0; pass<2; pass++){
+    for(let y=0;y<h;y++){ let sum = 0; const row = y*w; for(let x=-r;x<=r;x++) sum += src[row + Math.min(w-1, Math.max(0,x))];
+      for(let x=0;x<w;x++){ tmp[row+x] = sum/(2*r+1); sum += src[row + Math.min(w-1, x+r+1)] - src[row + Math.max(0, x-r)]; } }
+    for(let x=0;x<w;x++){ let sum = 0; for(let y=-r;y<=r;y++) sum += tmp[Math.min(h-1, Math.max(0,y))*w + x];
+      for(let y=0;y<h;y++){ dst[y*w+x] = sum/(2*r+1); sum += tmp[Math.min(h-1, y+r+1)*w + x] - tmp[Math.max(0, y-r)*w + x]; } }
+    src = dst; dst = new Float32Array(w*h);
+  }
+  return src;
+}
+function quickCtx(it){
+  if(it.q) return it.q;
+  const k = QS/Math.max(it.W, it.H), w = Math.max(8, Math.round(it.W*k)), h = Math.max(8, Math.round(it.H*k)), c = cv(w,h), x = c.getContext('2d', {willReadFrequently:true});
+  x.drawImage(it.base, 0, 0, w, h);
+  const d = x.getImageData(0,0,w,h).data, a = new Float32Array(w*h); for(let p=0;p<a.length;p++) a[p] = 1 - d[p*4]/255;
+  const r = Math.max(2, Math.round(strokeEst(it)*k*0.8)), orig = blurBox(a, w, h, r); let n2 = 0; for(let p=0;p<orig.length;p++) n2 += orig[p]*orig[p];
+  return it.q = { w, h, r, orig, n: Math.sqrt(n2) || 1 };
+}
+async function qScore(code, it){
+  try{
+    const q = quickCtx(it), sv = parseText(code); if(!sv) return 0;
+    sv.setAttribute('width', q.w); sv.setAttribute('height', q.h); sv.setAttribute('stroke', '#000');
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(sv)], {type:'image/svg+xml'}));
+    const im = await loadImg(url); URL.revokeObjectURL(url);
+    const c = cv(q.w, q.h), x = c.getContext('2d', {willReadFrequently:true}); x.fillStyle = '#fff'; x.fillRect(0,0,q.w,q.h); x.drawImage(im, 0, 0, q.w, q.h);
+    const d = x.getImageData(0,0,q.w,q.h).data, a = new Float32Array(q.w*q.h); for(let p=0;p<a.length;p++) a[p] = 1 - d[p*4]/255;
+    const b = blurBox(a, q.w, q.h, q.r); let dot = 0, n2 = 0; for(let p=0;p<b.length;p++){ dot += b[p]*q.orig[p]; n2 += b[p]*b[p]; }
+    return dot/((Math.sqrt(n2) || 1)*q.n);
+  }catch(e){ return 0; }
+}
+// wheels and hubs: circles that are nearly concentric get exactly the same centre
+function snapConcentric(code){
+  const sv = parseText(code); if(!sv) return code;
+  const cs = [...sv.children].filter(e => e.localName === 'circle'), R = e => parseFloat(e.getAttribute('r')) || 0;
+  const C = e => [parseFloat(e.getAttribute('cx')) || 0, parseFloat(e.getAttribute('cy')) || 0]; let changed = false;
+  for(const a of cs) for(const b of cs){
+    if(a === b || R(a) <= R(b)) continue; // a = the larger circle, b = the smaller one
+    const [ax, ay] = C(a), [bx, by] = C(b), d = Math.hypot(ax-bx, ay-by);
+    if(d > 0 && d <= 0.4*R(a)){ b.setAttribute('cx', ax); b.setAttribute('cy', ay); changed = true; }
+  }
+  return changed ? new XMLSerializer().serializeToString(sv) : code;
+}
+async function alignShapes(code, it, ev, budget = 150){
+  const sv0 = parseText(code); if(!sv0) return { code, ev };
+  const kinds = [...sv0.children].map(e => e.localName), idx = kinds.map((n,i) => GEO.test(n) ? i : -1).filter(i => i >= 0);
+  if(!idx.length || idx.length > 24) return { code, ev };
+  msg('Aligning shapes to the original...');
+  const vb = (sv0.getAttribute('viewBox')||'').split(/[\s,]+/).map(Number), k = (vb[2] || it.W)/it.W; // svg units per image px
+  const boxes = shapeBoxes(code), limD = 0.12*Math.max(it.W, it.H)*k, acc = {};
+  let best = code, bs = await qScore(code, it), trials = 0;
+  for(const i of idx) acc[i] = { sx:1, sy:1, dx:0, dy:0 };
+  for(const step of [16, 8, 4]){
+    const before = bs;
+    for(const i of idx){
+      const uniform = kinds[i] === 'circle' || kinds[i] === 'path'; // circles stay circles, paths keep their proportions
+      for(let rep=0; rep<3 && trials<budget; rep++){
+        let moved = false; const bb = boxes[i], d = step*k, cands = [[1,1,d,0],[1,1,-d,0],[1,1,0,d],[1,1,0,-d]];
+        if(bb && bb.width > 0 && bb.height > 0){
+          const cx = bb.x + bb.width/2, cy = bb.y + bb.height/2;
+          if(uniform){ const g = d/Math.max(bb.width, bb.height); for(const sc of [1+g, Math.max(0.5, 1-g)]) cands.push([sc, sc, cx*(1-sc), cy*(1-sc)]); }
+          else {
+            const gx = d/bb.width, gy = d/bb.height;
+            for(const sx of [1+gx, Math.max(0.5, 1-gx)]) cands.push([sx, 1, cx*(1-sx), 0]);
+            for(const sy of [1+gy, Math.max(0.5, 1-gy)]) cands.push([1, sy, 0, cy*(1-sy)]);
+          }
+        }
+        for(const [sx, sy, tx, ty] of cands){
+          if(trials >= budget) break;
+          const a = acc[i], ccx = bb ? bb.x + bb.width/2 : 0, ccy = bb ? bb.y + bb.height/2 : 0;
+          const ndx = a.dx + (bb ? sx*ccx + tx - ccx : tx), ndy = a.dy + (bb ? sy*ccy + ty - ccy : ty), nsx = a.sx*sx, nsy = a.sy*sy;
+          // keep every shape near where Gemini put it and never distort it much
+          if(Math.abs(ndx) > limD || Math.abs(ndy) > limD || nsx < 0.8 || nsx > 1.25 || nsy < 0.8 || nsy > 1.25) continue;
+          trials++;
+          const c2 = applyEl(best, i, { sx, sy, tx, ty }), s2 = await qScore(c2, it);
+          if(s2 > bs + 0.0003){
+            best = c2; bs = s2; moved = true; a.dx = ndx; a.dy = ndy; a.sx = nsx; a.sy = nsy;
+            if(bb){ bb.x = sx*bb.x + tx; bb.y = sy*bb.y + ty; bb.width *= sx; bb.height *= sy; }
+          }
+        }
+        if(!moved) break;
+      }
+    }
+    if(bs - before < 0.004) break; // this step size no longer helps
+  }
+  const snapped = snapConcentric(best);
+  if(snapped !== best){ const ss = await qScore(snapped, it); if(ss >= bs - 0.004) best = snapped; }
+  const e2 = await evalCode(best, it, false); // keep only if the real (strict) match improved
+  return e2.score > ev.score ? { code:best, ev:e2 } : { code, ev };
+}
+async function fitStrokeW(code, it, ev){
+  const sv = parseText(code); if(!sv) return { code, ev };
+  const vw = (sv.getAttribute('viewBox')||'').split(/[\s,]+/).map(Number)[2] || it.W, k = vw/it.W;
+  const est = strokeEst(it)*k, cw = parseFloat(sv.getAttribute('stroke-width')) || est;
+  const cands = [...new Set([est, est*0.9, est*1.1, cw*0.85, cw*1.15].filter(v => v > 0).map(v => +v.toFixed(2)))];
+  let best = { code, ev };
+  for(const w of cands){
+    const s2 = parseText(code); s2.setAttribute('stroke-width', w);
+    const c2 = new XMLSerializer().serializeToString(s2), e = await evalCode(c2, it, false);
+    if(e.score > best.ev.score) best = { code:c2, ev:e };
+  }
+  return best;
+}
+function commit(it, code, sc, model){
+  it.code = code; it.score = sc; if(model) it.model = model;
+  (it.hist = it.hist || []).push({ code, score:sc }); if(it.hist.length > 12) it.hist.shift();
+  if(it === cur){ $('code').value = code; syncControls(); render(); $('score').textContent = `Match ${Math.round(sc*100)}%`; fillHist(); }
+  renderQueue();
+}
+function tint(code, it){
+  if(!$('keepcol').checked) return code;
+  const sv = parseText(code); if(!sv) return code;
+  const c = sv.getAttribute('stroke'); if(c && c !== 'currentColor') return code;
+  sv.setAttribute('xmlns','http://www.w3.org/2000/svg'); sv.setAttribute('stroke', it.color || '#14213d');
+  return new XMLSerializer().serializeToString(sv);
+}
+async function convertItem(it, wi, pre){
+  const o = {}, srcM = $('src').value, minM0 = (+$('minm').value || 0)/100, good0 = Math.max(minM0, (+$('good').value || 80)/100);
+  let prevCode = it.code, prev = prevCode ? await evalCode(prevCode, it) : null;
+  if(srcM !== 'gemini'){ // free local centerline trace first; Gemini is only used when the trace is not good enough
+    const tr = await traceItem(it);
+    if(!prev || tr.ev.score > prev.score){ commit(it, tr.code, tr.ev.score, 'local trace'); prevCode = tr.code; prev = tr.ev; }
+    if(srcM === 'trace' || prev.score >= good0 || (!keys().length && !orKey())){
+      it.err = '';
+      if(prev.score < minM0){ it.status = 'low'; it.err = `Match ${Math.round(prev.score*100)}% is below the ${Math.round(minM0*100)}% minimum. Try the Gemini source or add a hint.`; } else it.status = 'done';
+      return prev.score;
+    }
+  }
+  let code = tint(await gem(firstParts(it), 0.2, pre+'Analyzing icon', wi, o), it), be = await evalCode(code, it);
+  if(be.c) ({ code, ev:be } = await fitStroke(code, it, be));
+  const keepPrev = !!(prev && prev.c && (!be.c || prev.score >= be.score));
+  if(!be.c && !keepPrev) throw new Error('The returned SVG could not be rendered.');
+  if(keepPrev){ code = prevCode; be = prev; } // the earlier result was better, so refine from it instead of replacing it
+  let best = code, bs = be.score, fails = 0;
+  if(keepPrev){ it.score = bs; if(it === cur) $('score').textContent = `Match ${Math.round(bs*100)}%`; renderQueue(); }
+  else commit(it, best, bs, o.model);
+  const rounds = +$('rounds').value, minM = (+$('minm').value || 0)/100, good = Math.max(minM, (+$('good').value || 80)/100);
+  const step = async label => {
+    const c2 = tint(await gem(refineParts(best, be.c, be.diff, it), 0.4, label, wi, o), it);
+    let e = await evalCode(c2, it), cc = c2;
+    if(e.c) ({ code:cc, ev:e } = await fitStroke(c2, it, e, e.score >= bs*0.85));
+    if(e.score > bs){ best = cc; be = e; bs = e.score; commit(it, best, bs, o.model); return true; }
+    return false;
+  };
+  let rr = 0, last = 0; // the chosen rounds always run; up to 2 more only while each round gains 3+ points
+  while(!stopFlag && bs < good && fails < 2){
+    if(rr >= rounds && !(rr < rounds + 2 && last >= 0.03)) break;
+    rr++; const before = bs;
+    fails = (await step(`${pre}Refining (round ${rr}), match ${Math.round(bs*100)}%`)) ? 0 : fails+1;
+    last = bs - before;
+  }
+  // minimum match: keep refining with the strongest models before giving up
+  for(let r=1; r<=2 && bs<minM && !stopFlag; r++){
+    o.best = true;
+    if(!(await step(`${pre}Below the ${Math.round(minM*100)}% minimum, extra refine with the best model (${r}/2), match ${Math.round(bs*100)}%`))) break;
+  }
+  o.best = false; it.err = '';
+  if(bs < minM){ it.status = 'low'; it.err = `Match ${Math.round(bs*100)}% is below the ${Math.round(minM*100)}% minimum. Add a hint or retry.`; }
+  else it.status = 'done';
+  return bs;
+}
+async function convert(){
+  if(!cur || busy) return;
+  const it = cur; lock(true); stopFlag = false; it.status = 'running'; renderQueue();
+  try{
+    const bs = await convertItem(it, null, '');
+    if(it.status === 'low') msg(it.err, true); else msg(`Done, match ${Math.round(bs*100)}%, model: ${it.model}. Tick "original overlay" to compare. If it is not close enough, click "Refine once more".`);
+  }catch(e){ it.status = 'error'; it.err = e.message; msg(e.message, true); }
+  lock(false);
+}
+function nextFree(){ // seconds until any key+model is usable again (0 = something is usable now)
+  const d = deadMap(), t = Date.now(); let best = Infinity;
+  for(const k of keys()){
+    if((d[kid(k)+'|*']||0) > t) continue;
+    for(const m of models){ const e = d[kid(k)+'|'+m]||0; best = Math.min(best, e > t ? (e-t)/1000 : 0); }
+  }
+  return best;
+}
+async function countdown(sec, pre){
+  for(let s=Math.ceil(sec); s>0 && !stopFlag; s--){ msg(`${pre}All keys are rate-limited. Retrying in ${s}s (click Stop to cancel)...`); await new Promise(r => setTimeout(r,1000)); }
+}
+async function convertAll(list){
+  if(busy) return;
+  const todo = list || items.filter(i => i.status !== 'done');
+  if(!todo.length) return msg('There are no images to convert.');
+  if($('notify').checked && window.Notification && Notification.permission === 'default'){ try{ Notification.requestPermission(); }catch(e){} }
+  lock(true); stopFlag = false; setProgress(0, todo.length);
+  if(!cur || cur.status === 'done') pick(todo[0]);
+  let next = 0, ok = 0, failed = 0, lowN = 0, doneN = 0, halted = '';
+  const conc = Math.max(1, Math.min(+$('conc').value || 1, todo.length));
+  const worker = async wi => {
+    while(!stopFlag && !halted){
+      const idx = next++, it = todo[idx]; if(!it) return;
+      it.status = 'running'; it.err = ''; renderQueue();
+      const pre = `[${idx+1}/${todo.length}] ${it.name}: `; let waits = 0;
+      for(;;){
+        try{ await convertItem(it, wi, pre); if(it.status === 'low') lowN++; else ok++; break; }
+        catch(e){
+          const wait = nextFree();
+          if(!stopFlag && wait > 0 && wait <= 150 && waits < 3){ waits++; await countdown(wait+1, pre); continue; }
+          if(wait === 0){ it.status = 'error'; it.err = e.message; failed++; }
+          else { it.status = 'pending'; halted = 'All keys/models are out of quota or invalid. Add a new key, or click "Convert all" later to continue.'; }
+          break;
+        }
+      }
+      doneN++; setProgress(doneN, todo.length); renderQueue();
+    }
+  };
+  await Promise.all(Array.from({ length:conc }, (_, i) => worker(i)));
+  items.forEach(i => { if(i.status === 'running') i.status = 'pending'; });
+  lock(false);
+  const left = items.filter(i => i.status !== 'done' && i.status !== 'low').length;
+  const summary = `${ok} converted${failed ? `, ${failed} failed` : ''}${lowN ? `, ${lowN} below the minimum match` : ''}${left ? `, ${left} remaining` : ''}. ${stopFlag ? 'Stopped. ' : ''}${halted}`.trim();
+  msg(summary, !!halted && !ok); finishNotify(summary);
+}
+async function refineOnce(){
+  const it = cur; if(!it || busy || !$('code').value.trim()) return;
+  lock(true);
+  try{
+    const code0 = $('code').value, ce = await evalCode(code0, it);
+    if(!ce.c) throw new Error('The current code has an error. Fix it first.');
+    const o = {}, c2 = tint(await gem(refineParts(code0, ce.c, ce.diff, it), 0.4, 'Refining once more', null, o), it);
+    let e = await evalCode(c2, it), cc = c2;
+    if(e.c) ({ code:cc, ev:e } = await fitStroke(c2, it, e));
+    if(e.score > ce.score){ commit(it, cc, e.score, o.model); msg(`Improved: ${Math.round(ce.score*100)}% to ${Math.round(e.score*100)}%.`); }
+    else msg('The new version was not better, so the previous code was kept. You can try again.');
+  }catch(e){ msg(e.message, true); }
+  lock(false);
+}
+$('alignbtn').onclick = async () => {
+  const it = cur; if(!it || busy || !$('code').value.trim()) return;
+  lock(true);
+  try{
+    const code0 = $('code').value, e0 = await evalCode(code0, it);
+    if(!e0.c) throw new Error('The current code has an error. Fix it first.');
+    let b = await nudge(code0, it, e0); b = await alignShapes(b.code, it, b.ev, 520); b = await fitStrokeW(b.code, it, b.ev);
+    if(b.ev.score > e0.score){ commit(it, b.code, b.ev.score, it.model); msg(`Aligned: ${Math.round(e0.score*100)}% to ${Math.round(b.ev.score*100)}%.`); }
+    else msg('Shapes are already as aligned as they can get. Try "Refine once more" or add a hint.');
+  }catch(e){ msg(e.message, true); }
+  lock(false);
+};
+$('go').onclick = convert;
+$('fix').onclick = refineOnce;
+$('all').onclick = () => convertAll();
+$('sel').onclick = () => convertAll(items.filter(i => i.sel));
+$('retry').onclick = () => convertAll(items.filter(i => i.status === 'low' || i.status === 'error'));
+$('selall').onclick = () => { const all = items.length && items.every(i => i.sel); items.forEach(i => i.sel = !all); renderQueue(); };
+
+// ---------- code, preview, controls ----------
+function parseText(t){
+  const doc = new DOMParser().parseFromString(t, 'image/svg+xml'), s = doc.documentElement;
+  return (s && s.nodeName.toLowerCase()==='svg' && !doc.querySelector('parsererror')) ? s : null;
+}
+function setCode(t){ $('code').value = t; syncControls(); render(); }
+function render(){
+  const s = parseText($('code').value);
+  $('after').innerHTML = ''; ['m16','m24','m32'].forEach(i => $(i).innerHTML = '');
+  $('copy').disabled = $('dl').disabled = $('jsx').disabled = !s;
+  $('fix').disabled = $('alignbtn').disabled = busy || !base || !$('code').value.trim();
+  if(!s) return;
+  s.removeAttribute('width'); s.removeAttribute('height');
+  $('after').appendChild(document.importNode(s, true));
+  const xs = new XMLSerializer().serializeToString(s);
+  [16,24,32].forEach(n => { $('m'+n).innerHTML = xs.replace('<svg ', `<svg width="${n}" height="${n}" `); });
+  updOv();
+}
+function syncControls(){
+  const s = parseText($('code').value); if(!s) return;
+  const vb = (s.getAttribute('viewBox')||'0 0 24 24').split(/[\s,]+/).map(Number), m = Math.max(vb[2],vb[3]) || 24;
+  $('sw').min = m/400; $('sw').max = m/6; $('sw').step = m/1000;
+  const w = parseFloat(s.getAttribute('stroke-width')); if(w) $('sw').value = w;
+  const c = s.getAttribute('stroke'); if(/^#[0-9a-f]{6}$/i.test(c||'')) $('sc').value = c;
+  if(s.getAttribute('stroke-linecap')) $('cap').value = s.getAttribute('stroke-linecap');
+  if(s.getAttribute('stroke-linejoin')) $('join').value = s.getAttribute('stroke-linejoin');
+}
+function setAttr(name, val){
+  const s = parseText($('code').value); if(!s) return;
+  s.setAttribute('xmlns','http://www.w3.org/2000/svg'); s.setAttribute(name, val);
+  $('code').value = new XMLSerializer().serializeToString(s); render();
+}
+$('sw').oninput = () => setAttr('stroke-width', $('sw').value);
+$('sc').oninput = () => setAttr('stroke', $('sc').value);
+$('cap').onchange = () => setAttr('stroke-linecap', $('cap').value);
+$('join').onchange = () => setAttr('stroke-linejoin', $('join').value);
+$('code').addEventListener('input', render);
+['ovl','dfm','ovo'].forEach(id => $(id).addEventListener('input', updOv));
+
+// ---------- export ----------
+function outOf(code){
+  const s = parseText(code); if(!s) return null;
+  s.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  if(s.getAttribute('stroke')==='currentColor') s.setAttribute('stroke', $('sc').value);
+  return new XMLSerializer().serializeToString(s);
+}
+const out = () => outOf($('code').value);
+$('copy').onclick = async () => {
+  const t = out(); if(!t) return;
+  try { await navigator.clipboard.writeText(t); msg('Copied to clipboard.'); }
+  catch(e){ $('code').select(); msg('Could not copy automatically. The code is selected, press Ctrl+C.', true); }
+};
+$('dl').onclick = () => {
+  const t = out(); if(!t) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n'+t], {type:'image/svg+xml'}));
+  a.download = 'icon.svg'; a.click(); URL.revokeObjectURL(a.href);
+  msg('icon.svg downloaded. You can edit it as stroke lines in Figma/Illustrator.');
+};
+
+const XMLH = '<?xml version="1.0" encoding="UTF-8"?>\n';
+const fileName = it => it.name.replace(/\.[^.]+$/, '') + '.svg';
+function download(blob, name){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+function dlItem(it){
+  if(it === cur) it.code = $('code').value;
+  const t = outOf(it.code); if(!t) return msg('This image has no valid SVG yet.', true);
+  download(new Blob([XMLH+t], {type:'image/svg+xml'}), fileName(it));
+}
+const crcT = (() => { const t=[]; for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+const crc32 = u => { let c = -1; for(let i=0;i<u.length;i++) c = crcT[(c^u[i])&255]^(c>>>8); return (c^-1)>>>0; };
+function makeZip(files){
+  const enc = new TextEncoder(), chunks = [], cen = []; let off = 0;
+  for(const f of files){
+    const n = enc.encode(f.name), d = f.data, c = crc32(d);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true); h.setUint16(12,0x21,true);
+    h.setUint32(14,c,true); h.setUint32(18,d.length,true); h.setUint32(22,d.length,true); h.setUint16(26,n.length,true);
+    chunks.push(new Uint8Array(h.buffer), n, d);
+    const e = new DataView(new ArrayBuffer(46));
+    e.setUint32(0,0x02014b50,true); e.setUint16(4,20,true); e.setUint16(6,20,true); e.setUint16(8,0x0800,true); e.setUint16(14,0x21,true);
+    e.setUint32(16,c,true); e.setUint32(20,d.length,true); e.setUint32(24,d.length,true); e.setUint16(28,n.length,true); e.setUint32(42,off,true);
+    cen.push(new Uint8Array(e.buffer), n);
+    off += 30 + n.length + d.length;
+  }
+  const size = cen.reduce((a,b) => a+b.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,size,true); end.setUint32(16,off,true);
+  return new Blob([...chunks, ...cen, new Uint8Array(end.buffer)], {type:'application/zip'});
+}
+$('zip').onclick = () => {
+  if(cur) cur.code = $('code').value;
+  const names = new Set(), files = [], enc = new TextEncoder();
+  for(const it of items){
+    const t = it.code && outOf(it.code); if(!t) continue;
+    let n = fileName(it), k = 1; while(names.has(n)) n = fileName(it).replace(/\.svg$/, `-${++k}.svg`);
+    names.add(n); files.push({ name:n, data:enc.encode(XMLH+t) });
+  }
+  if(!files.length) return msg('There are no SVGs to download.', true);
+  download(makeZip(files), 'icons.zip'); msg(`icons.zip downloaded (${files.length} SVGs).`);
+};
+
+// ---------- overlay / difference map ----------
+async function updOv(){
+  const on = $('ovl').checked, df = $('dfm').checked, o = $('ovimg');
+  o.hidden = !(on || df); if(o.hidden || !cur) return;
+  if(df){ const c = await raster($('code').value, cur); if(c) o.src = compare(c, cur).diff.toDataURL(); o.style.opacity = 1; }
+  else { if(o.getAttribute('src') !== cur.url) o.src = cur.url; o.style.opacity = $('ovo').value; }
+}
+$('pbg').onchange = () => { $('afterStage').className = 'stage ' + $('pbg').value; };
+
+// ---------- version history ----------
+function fillHist(){
+  const h = (cur && cur.hist) || [];
+  $('hist').innerHTML = h.map((v,i) => `<option value="${i}">v${i+1} · ${Math.round(v.score*100)}%</option>`).join('') || '<option>No versions</option>';
+  $('hist').disabled = !h.length; if(h.length) $('hist').value = h.length-1;
+}
+$('hist').onchange = () => {
+  const v = cur && cur.hist && cur.hist[+$('hist').value]; if(!v) return;
+  setCode(v.code); cur.score = v.score; $('score').textContent = `Match ${Math.round(v.score*100)}%`; renderQueue();
+};
+$('hint').oninput = () => { if(cur) cur.hint = $('hint').value; saveSoon(); };
+
+// ---------- clean-up, apply style to all, JSX, sprite ----------
+const cleanCode = (code, dec) => dec < 0 ? code : code.replace(/-?\d*\.\d+/g, n => String(+(+n).toFixed(dec))).replace(/>\s+</g, '>\n<');
+$('clean').onclick = () => { if($('code').value.trim()){ setCode(cleanCode($('code').value, +$('dec').value)); msg('Code cleaned.'); } };
+function applyAll(){
+  if(cur) cur.code = $('code').value;
+  let n = 0;
+  for(const it of items){
+    const sv = it.code && parseText(it.code); if(!sv) continue;
+    const vb = (sv.getAttribute('viewBox')||'0 0 24 24').split(/[\s,]+/).map(Number), m = Math.max(vb[2], vb[3]) || 24;
+    sv.setAttribute('xmlns','http://www.w3.org/2000/svg'); sv.setAttribute('fill','none');
+    sv.setAttribute('stroke', $('keepcol').checked && sv.getAttribute('stroke') && sv.getAttribute('stroke') !== 'currentColor' ? sv.getAttribute('stroke') : ($('keepcol').checked ? (it.color || $('sc').value) : $('sc').value)); sv.setAttribute('stroke-width', +(+$('sw24').value * m/24).toFixed(2));
+    sv.setAttribute('stroke-linecap', $('cap').value); sv.setAttribute('stroke-linejoin', $('join').value);
+    it.code = cleanCode(new XMLSerializer().serializeToString(sv), +$('dec').value); n++;
+  }
+  if(cur){ $('code').value = cur.code; syncControls(); render(); }
+  renderQueue(); msg(`Style applied to ${n} icon(s) (stroke ${$('sw24').value}/24, color, cap, join).`);
+}
+$('applyall').onclick = applyAll;
+function toJSX(code, file){
+  const sv = parseText(code); if(!sv) return null;
+  sv.removeAttribute('width'); sv.removeAttribute('height');
+  const name = (file||'icon').replace(/\.[^.]+$/,'').split(/[^a-zA-Z0-9]+/).filter(Boolean).map(w => w[0].toUpperCase()+w.slice(1)).join('').replace(/^(\d)/,'Icon$1') || 'Icon';
+  const x = new XMLSerializer().serializeToString(sv).replace(/<svg([^>]*)>/, '<svg$1 {...props}>')
+    .replace(/<[^>]+>/g, t => t.replace(/ ([a-z]+(?:-[a-z]+)+)=/g, (m,a) => ' ' + a.replace(/-([a-z])/g, (_,c) => c.toUpperCase()) + '='));
+  return `export default function ${name}(props) {\n  return (\n    ${x}\n  );\n}\n`;
+}
+$('jsx').onclick = async () => {
+  const t = toJSX($('code').value, cur ? cur.name : 'icon'); if(!t) return;
+  try{ await navigator.clipboard.writeText(t); msg('JSX component copied.'); }catch(e){ msg('Could not copy automatically.', true); }
+};
+$('sprite').onclick = () => {
+  if(cur) cur.code = $('code').value;
+  const ids = new Set(), ser = new XMLSerializer(); let o = '<svg xmlns="http://www.w3.org/2000/svg" style="display:none">\n', n = 0;
+  for(const it of items){
+    const sv = it.code && parseText(it.code); if(!sv) continue;
+    let id = fileName(it).replace(/\.svg$/,'').replace(/[^\w-]+/g,'-'); while(ids.has(id)) id += '-2'; ids.add(id);
+    const at = ['viewBox','fill','stroke','stroke-width','stroke-linecap','stroke-linejoin'].map(a => sv.getAttribute(a) != null ? ` ${a}="${sv.getAttribute(a)}"` : '').join('');
+    o += `<symbol id="${id}"${at}>${[...sv.childNodes].map(c => ser.serializeToString(c)).join('').replace(/ xmlns="[^"]*"/g,'')}</symbol>\n`; n++;
+  }
+  if(!n) return msg('There are no SVGs for the sprite.', true);
+  download(new Blob([XMLH + o + '</svg>'], {type:'image/svg+xml'}), 'sprite.svg');
+  msg(`sprite.svg downloaded (${n} icons). Usage: <svg><use href="sprite.svg#name"/></svg>`);
+};
+
+// ---------- persistence (images + results survive refresh) ----------
+const idbP = new Promise(res => { try{ const r = indexedDB.open('icon2svg',1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }catch(e){ res(null); } });
+async function kvSet(k, v){ try{ const db = await idbP; if(db) db.transaction('kv','readwrite').objectStore('kv').put(v,k); }catch(e){} }
+async function kvGet(k){ try{ const db = await idbP; if(!db) return null; return await new Promise(r => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => r(q.result); q.onerror = () => r(null); }); }catch(e){ return null; } }
+let restored = false, saveT;
+function saveSoon(){ clearTimeout(saveT); saveT = setTimeout(saveNow, 600); }
+let lastSave = 0;
+function saveNow(){
+  if(!restored) return;
+  if(busy && Date.now() - lastSave < 15000){ clearTimeout(saveT); saveT = setTimeout(saveNow, 5000); return; } // during a batch, save at most every ~15 s
+  lastSave = Date.now(); kvSet('items', items.map(({base, ink, q, thumb, ...r}) => ({ ...r, status: r.status === 'running' ? 'pending' : r.status }))); }
+async function restore(){
+  try{
+    const arr = await kvGet('items');
+    for(const r of (arr||[])){
+      try{ const im = await loadImg(r.url), p = prep(im, r.res || 512, !!r.crop); items.push({ ...r, id:++uid, thumb:thumbOf(im), W:p.w, H:p.h, base:p.c, ink:mask(p.c), color:p.color, rect:p.rect, tEst:0, bb:undefined, status: r.status === 'running' ? 'pending' : r.status }); }catch(e){}
+    }
+    if(items.length){
+      msg('Re-checking saved matches...');
+      const minM = (+$('minm').value || 0)/100;
+      for(const it of items){
+        if(!it.code) continue;
+        const e = await evalCode(it.code, it, false); it.score = e.score;
+        if(it.status === 'done' || it.status === 'low'){ it.status = e.score >= minM ? 'done' : 'low'; it.err = it.status === 'low' ? `Match ${Math.round(e.score*100)}% is below the ${Math.round(minM*100)}% minimum. Add a hint or retry.` : ''; }
+      }
+      pick(items.find(i => i.status !== 'done') || items[0]);
+      const left = items.filter(i => i.status !== 'done').length;
+      msg(`Restored ${items.length} image(s) from your last session${left ? `, ${left} remaining. Click "Convert all" to continue.` : '.'}`);
+    }
+  }finally{ restored = true; }
+}
+
+// ---------- sheet export: all icons aligned in one grid SVG ----------
+function inkBox(it){
+  if(it.bb !== undefined) return it.bb;
+  const { W, H, ink } = it; let x0=W, y0=H, x1=-1, y1=-1;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(ink[y*W+x]){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  return it.bb = x1 < 0 ? null : { x0, y0, x1:x1+1, y1:y1+1 };
+}
+function buildSheet(){
+  if(cur) cur.code = $('code').value;
+  const list = items.filter(it => it.code && parseText(it.code)); if(!list.length) return null;
+  const cols = Math.max(1, +$('scols').value || 6), cell = +$('scell').value || 128, pad = cell*(+$('spad').value || 0)/100;
+  const gap = +$('sgap').value || 0, lab = $('slab').checked ? 22 : 0, bgv = $('sbg').value, dark = bgv === 'dark';
+  const rows = Math.ceil(list.length/cols), TW = gap + cols*(cell+gap), TH = gap + rows*(cell+lab+gap);
+  const r = (v, d=2) => +v.toFixed(d), ser = new XMLSerializer(), ids = new Set();
+  let o = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TW} ${TH}" width="${TW}" height="${TH}">\n`;
+  if(bgv !== 'none') o += `<rect width="${TW}" height="${TH}" fill="${dark ? '#111111' : '#ffffff'}"/>\n`;
+  list.forEach((it, i) => {
+    const sv = parseText(it.code), x = gap + (i%cols)*(cell+gap), y = gap + Math.floor(i/cols)*(cell+lab+gap);
+    const [vx=0, vy=0, vw=it.W, vh=it.H] = (sv.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+    let bx = vx, by = vy, bw = vw, bh = vh;
+    const bb = $('sfit').value === 'bbox' ? inkBox(it) : null;
+    if(bb){ const sx = vw/it.W, sy = vh/it.H; bx = vx + bb.x0*sx; by = vy + bb.y0*sy; bw = (bb.x1-bb.x0)*sx; bh = (bb.y1-bb.y0)*sy; }
+    const s = Math.min((cell-2*pad)/bw, (cell-2*pad)/bh), tx = x + (cell-bw*s)/2 - bx*s, ty = y + (cell-bh*s)/2 - by*s;
+    const ssw = +$('ssw').value, sw = ssw > 0 ? ssw/s : (parseFloat(sv.getAttribute('stroke-width')) || 1.5);
+    let col = sv.getAttribute('stroke') || 'currentColor';
+    if(col === 'currentColor') col = dark ? '#ffffff' : $('sc').value; else if(dark && /^#0{3}(0{3})?$/i.test(col)) col = '#ffffff';
+    let id = fileName(it).replace(/\.svg$/,'').replace(/[^\w-]+/g,'-'); while(ids.has(id)) id += '-2'; ids.add(id);
+    o += `<g id="${id}" transform="translate(${r(tx)} ${r(ty)}) scale(${r(s,4)})" fill="none" stroke="${col}" stroke-width="${r(sw,3)}" stroke-linecap="${sv.getAttribute('stroke-linecap')||'round'}" stroke-linejoin="${sv.getAttribute('stroke-linejoin')||'round'}">${[...sv.childNodes].map(c => ser.serializeToString(c)).join('').replace(/ xmlns="[^"]*"/g,'')}</g>\n`;
+    if(lab) o += `<text x="${r(x+cell/2)}" y="${r(y+cell+15)}" text-anchor="middle" font-family="system-ui,Arial,sans-serif" font-size="11" fill="${dark ? '#aab4c8' : '#5d6b85'}">${esc(id)}</text>\n`;
+  });
+  return o + '</svg>';
+}
+function sheetPrev(){
+  const t = buildSheet(), b = $('sheetbox');
+  if(!t){ b.hidden = true; return msg('There are no SVGs for the sheet.', true); }
+  b.hidden = false; b.innerHTML = t;
+}
+$('sprev').onclick = sheetPrev;
+$('sdl').onclick = () => {
+  const t = buildSheet(); if(!t) return msg('There are no SVGs for the sheet.', true);
+  download(new Blob([XMLH + t], {type:'image/svg+xml'}), 'icon-sheet.svg');
+  msg('icon-sheet.svg downloaded. Each icon is a separate named group, so it stays editable in Figma/Illustrator.');
+};
+['scols','scell','spad','sgap','sfit','ssw','sbg','slab'].forEach(id => $(id).addEventListener('input', () => { if(!$('sheetbox').hidden) sheetPrev(); }));
+
+// ---------- local centerline trace: thin the ink to a 1px skeleton, then fit lines, circles and arcs (no API call) ----------
+const DX8 = [-1,0,1,-1,1,-1,0,1], DY8 = [-1,-1,-1,0,0,1,1,1];
+function thinZS(ink, W, H){ // Zhang-Suen thinning
+  const a = Uint8Array.from(ink); for(let x=0;x<W;x++){ a[x] = 0; a[(H-1)*W+x] = 0; } for(let y=0;y<H;y++){ a[y*W] = 0; a[y*W+W-1] = 0; }
+  const del = []; let changed = true;
+  while(changed){
+    changed = false;
+    for(let pass=0; pass<2; pass++){
+      del.length = 0;
+      for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+        const i = y*W+x; if(!a[i]) continue;
+        const p2=a[i-W], p3=a[i-W+1], p4=a[i+1], p5=a[i+W+1], p6=a[i+W], p7=a[i+W-1], p8=a[i-1], p9=a[i-W-1];
+        const B = p2+p3+p4+p5+p6+p7+p8+p9; if(B < 2 || B > 6) continue;
+        const A = (p2===0&&p3===1)+(p3===0&&p4===1)+(p4===0&&p5===1)+(p5===0&&p6===1)+(p6===0&&p7===1)+(p7===0&&p8===1)+(p8===0&&p9===1)+(p9===0&&p2===1);
+        if(A !== 1) continue;
+        if(pass === 0 ? (p2*p4*p6 !== 0 || p4*p6*p8 !== 0) : (p2*p4*p8 !== 0 || p2*p6*p8 !== 0)) continue;
+        del.push(i);
+      }
+      if(del.length){ changed = true; for(const i of del) a[i] = 0; }
+    }
+  }
+  return a;
+}
+function skelClean(a, W, H){ // drop redundant staircase pixels so lines are exactly 1px wide
+  for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+    const i = y*W+x; if(!a[i]) continue;
+    let n = 0, k1 = -1, k2 = -1;
+    for(let k=0;k<8;k++) if(a[i+DY8[k]*W+DX8[k]]){ n++; if(k1 < 0) k1 = k; else k2 = k; }
+    if(n === 2 && Math.max(Math.abs(DX8[k1]-DX8[k2]), Math.abs(DY8[k1]-DY8[k2])) <= 1) a[i] = 0;
+  }
+}
+function skelEdges(a, W, H, T){ // skeleton -> list of polylines between junctions / end points
+  const N = W*H, deg = new Uint8Array(N), pix = [];
+  for(let i=0;i<N;i++) if(a[i]){ let n = 0; for(let k=0;k<8;k++) if(a[i+DY8[k]*W+DX8[k]]) n++; deg[i] = n; pix.push(i); }
+  const isNode = i => a[i] && deg[i] !== 2, cl = new Int32Array(N).fill(-1), cents = [];
+  const nbrs = i => { const r = []; for(let k=0;k<8;k++){ const j = i+DY8[k]*W+DX8[k]; if(a[j]) r.push(j); } return r; };
+  const P = i => [i%W + 0.5, ((i/W)|0) + 0.5];
+  for(const i of pix){
+    if(!isNode(i) || cl[i] >= 0) continue;
+    const id = cents.length, st = [i]; cl[i] = id; let sx = 0, sy = 0, c = 0;
+    while(st.length){ const u = st.pop(), p = P(u); sx += p[0]; sy += p[1]; c++; for(const j of nbrs(u)) if(isNode(j) && cl[j] < 0){ cl[j] = id; st.push(j); } }
+    cents.push([sx/c, sy/c]);
+  }
+  const seen = new Uint8Array(N); let edges = [];
+  for(const s of pix){
+    if(!isNode(s)) continue;
+    for(const n of nbrs(s)){
+      if(isNode(n) || seen[n]) continue;
+      const pts = [cents[cl[s]]]; let prev = s, cur = n, end = -1;
+      for(;;){
+        seen[cur] = 1; pts.push(P(cur));
+        const cand = nbrs(cur).filter(j => j !== prev), nd = cand.find(isNode);
+        if(nd !== undefined){ end = cl[nd]; pts.push(cents[end]); break; }
+        const nx = cand.find(j => !seen[j]); if(nx === undefined) break;
+        prev = cur; cur = nx;
+      }
+      if(end >= 0) edges.push({ a:cl[s], b:end, pts });
+    }
+  }
+  for(const i of pix){ // loops with no junction at all (an isolated ring)
+    if(isNode(i) || seen[i]) continue;
+    const pts = [P(i)]; seen[i] = 1; let cur = i;
+    for(;;){ const nx = nbrs(cur).find(j => !seen[j]); if(nx === undefined) break; seen[nx] = 1; pts.push(P(nx)); cur = nx; }
+    if(pts.length >= 8){ const id = -2 - edges.length; edges.push({ a:id, b:id, pts }); }
+  }
+  edges = edges.filter(e => !(e.a === e.b && e.a >= 0 && e.pts.length < 6));
+  const val = () => { const v = new Map(); for(const e of edges){ v.set(e.a, (v.get(e.a)||0)+1); v.set(e.b, (v.get(e.b)||0)+1); } return v; };
+  const len = e => { let L = 0; for(let i=1;i<e.pts.length;i++) L += Math.hypot(e.pts[i][0]-e.pts[i-1][0], e.pts[i][1]-e.pts[i-1][1]); return L; };
+  let v = val(); // spurs: short dangling branches left by thick corners
+  edges = edges.filter(e => !(e.a !== e.b && len(e) < 0.8*T && ((v.get(e.a) === 1 && v.get(e.b) >= 3) || (v.get(e.b) === 1 && v.get(e.a) >= 3))));
+  v = val(); edges = edges.filter(e => e.a === e.b || !(v.get(e.a) === 1 && v.get(e.b) === 1 && len(e) < 1.2*T)); // specks / scan noise: short isolated bits
+  for(let guard=0; guard<500; guard++){ // join edges that meet at a junction with only two branches
+    v = val(); let did = false;
+    for(const [c, n] of v){
+      if(c < 0 || n !== 2) continue;
+      const inc = edges.filter(e => e.a === c || e.b === c); if(inc.length !== 2) continue;
+      const [e1, e2] = inc, o1 = e1.b === c ? e1 : { a:e1.b, b:e1.a, pts:e1.pts.slice().reverse() }, o2 = e2.a === c ? e2 : { a:e2.b, b:e2.a, pts:e2.pts.slice().reverse() };
+      edges = edges.filter(e => e !== e1 && e !== e2); edges.push({ a:o1.a, b:o2.b, pts:o1.pts.concat(o2.pts.slice(1)) }); did = true; break;
+    }
+    if(!did) break;
+  }
+  return edges;
+}
+function rdp(p, eps){
+  if(p.length < 3) return p.slice();
+  const a = p[0], b = p[p.length-1], dx = b[0]-a[0], dy = b[1]-a[1], L = Math.hypot(dx, dy) || 1e-9; let dm = 0, ix = 0;
+  for(let i=1;i<p.length-1;i++){ const d = Math.abs(dy*(p[i][0]-a[0]) - dx*(p[i][1]-a[1]))/L; if(d > dm){ dm = d; ix = i; } }
+  if(dm <= eps) return [a, b];
+  return rdp(p.slice(0, ix+1), eps).slice(0, -1).concat(rdp(p.slice(ix), eps));
+}
+function rdpClosed(p, eps){ // split a closed loop at the point farthest from its start, simplify both halves
+  let ix = 0, dm = 0; for(let i=1;i<p.length;i++){ const d = Math.hypot(p[i][0]-p[0][0], p[i][1]-p[0][1]); if(d > dm){ dm = d; ix = i; } }
+  return rdp(p.slice(0, ix+1), eps).slice(0, -1).concat(rdp(p.slice(ix).concat([p[0]]), eps).slice(0, -1));
+}
+function fitCircle(p){
+  const n = p.length; let mx = 0, my = 0; for(const q of p){ mx += q[0]; my += q[1]; } mx /= n; my /= n;
+  let Suu = 0, Svv = 0, Suv = 0, Suuu = 0, Svvv = 0, Suvv = 0, Svuu = 0;
+  for(const q of p){ const u = q[0]-mx, v = q[1]-my; Suu += u*u; Svv += v*v; Suv += u*v; Suuu += u*u*u; Svvv += v*v*v; Suvv += u*v*v; Svuu += v*u*u; }
+  const det = Suu*Svv - Suv*Suv; if(Math.abs(det) < 1e-6*(Suu+Svv)*(Suu+Svv) + 1e-9) return null;
+  const A = 0.5*(Suuu+Suvv), B = 0.5*(Svvv+Svuu), uc = (A*Svv - B*Suv)/det, vc = (B*Suu - A*Suv)/det;
+  const cx = mx+uc, cy = my+vc, r = Math.sqrt(uc*uc + vc*vc + (Suu+Svv)/n); let e2 = 0;
+  for(const q of p){ const d = Math.hypot(q[0]-cx, q[1]-cy); e2 += (d-r)*(d-r); }
+  return { cx, cy, r, rms: Math.sqrt(e2/n) };
+}
+function arcInfo(p, f){
+  let s = 0;
+  for(let i=1;i<p.length;i++){ let d = Math.atan2(p[i][1]-f.cy, p[i][0]-f.cx) - Math.atan2(p[i-1][1]-f.cy, p[i-1][0]-f.cx); while(d > Math.PI) d -= 2*Math.PI; while(d < -Math.PI) d += 2*Math.PI; s += d; }
+  return { sweep: s > 0 ? 1 : 0, large: Math.abs(s) > Math.PI ? 1 : 0, span: Math.abs(s) };
+}
+const plen = p => { let L = 0; for(let i=1;i<p.length;i++) L += Math.hypot(p[i][0]-p[i-1][0], p[i][1]-p[i-1][1]); return L; };
+function trimEnds(p, d){ // drop the first/last d px of a polyline (skeletons bend near junctions)
+  let acc = 0, i0 = 0, i1 = p.length-1;
+  while(i0 < p.length-1 && acc < d){ acc += Math.hypot(p[i0+1][0]-p[i0][0], p[i0+1][1]-p[i0][1]); i0++; }
+  acc = 0; while(i1 > i0 && acc < d){ acc += Math.hypot(p[i1][0]-p[i1-1][0], p[i1][1]-p[i1-1][1]); i1--; }
+  return i1 - i0 >= 3 ? p.slice(i0, i1+1) : p;
+}
+function edgeToEl(e, T, W, H){
+  const p = e.pts; if(p.length < 2) return null;
+  const closed = e.a === e.b, same = Math.hypot(p[0][0]-p[p.length-1][0], p[0][1]-p[p.length-1][1]) < 0.01, pts = same ? p.slice(0, -1) : p;
+  if(pts.length < 2) return null;
+  const L = plen(pts), core = closed ? pts : trimEnds(pts, Math.min(0.15*L, 1.2*T));
+  if(!closed && rdp(core, Math.max(1.3, 0.015*L)).length === 2) return { t:'line', v:[pts[0], pts[pts.length-1]] };
+  if(core.length >= 10){
+    const f = fitCircle(core);
+    if(f && f.r >= T*0.6 && f.r <= 4*Math.max(W, H) && f.rms <= Math.max(2.2, 0.05*f.r)){
+      const info = arcInfo(closed ? pts.concat([pts[0]]) : pts, f);
+      if(closed && info.span >= 5.5) return { t:'circle', f };
+      const chord = Math.hypot(pts[0][0]-pts[pts.length-1][0], pts[0][1]-pts[pts.length-1][1]), sag = f.r - Math.sqrt(Math.max(0, f.r*f.r - chord*chord/4));
+      if(!closed && sag >= Math.max(2.5, 0.02*chord)) return { t:'arc', f, info, pts, core };
+    }
+  }
+  return { t:'poly', v: closed ? rdpClosed(pts, 1.3) : rdp(pts, 1.3), closed };
+}
+function mergeArcs(arcs){ // several arcs of one wheel (split by the body lines touching it) become one circle
+  const out = [], used = new Set();
+  arcs.forEach((a, i) => {
+    if(used.has(i)) return; const grp = [i]; used.add(i);
+    arcs.forEach((b, j) => { if(!used.has(j) && Math.hypot(a.f.cx-b.f.cx, a.f.cy-b.f.cy) <= 0.06*a.f.r + 2 && Math.abs(a.f.r-b.f.r) <= 0.06*a.f.r + 2){ grp.push(j); used.add(j); } });
+    const span = grp.reduce((s, k) => s + arcs[k].info.span, 0);
+    if(span >= 5.3){ const f = fitCircle([].concat(...grp.map(k => arcs[k].core))) || a.f; out.push({ t:'circle', f }); }
+    else grp.forEach(k => out.push(arcs[k]));
+  });
+  return out;
+}
+function traceSVG(it){
+  const { W, H } = it, T = Math.max(2, strokeEst(it)), a = thinZS(it.ink, W, H); skelClean(a, W, H);
+  const els = [], arcs = [], n1 = v => +v.toFixed(1);
+  for(const e of skelEdges(a, W, H, T)){ const el = edgeToEl(e, T, W, H); if(!el) continue; if(el.t === 'arc') arcs.push(el); else els.push(el); }
+  els.push(...mergeArcs(arcs)); traceSVG.last = els;
+  const out = els.map(el => {
+    if(el.t === 'line') return `<line x1="${n1(el.v[0][0])}" y1="${n1(el.v[0][1])}" x2="${n1(el.v[1][0])}" y2="${n1(el.v[1][1])}"/>`;
+    if(el.t === 'circle') return `<circle cx="${n1(el.f.cx)}" cy="${n1(el.f.cy)}" r="${n1(el.f.r)}"/>`;
+    if(el.t === 'arc'){ const p0 = el.pts[0], p1 = el.pts[el.pts.length-1]; return `<path d="M${n1(p0[0])} ${n1(p0[1])}A${n1(el.f.r)} ${n1(el.f.r)} 0 ${el.info.large} ${el.info.sweep} ${n1(p1[0])} ${n1(p1[1])}"/>`; }
+    return `<path d="M${el.v.map(q => n1(q[0]) + ' ' + n1(q[1])).join('L')}${el.closed ? 'Z' : ''}"/>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" fill="none" stroke="currentColor" stroke-width="${n1(T)}" stroke-linecap="round" stroke-linejoin="round">\n${out.join('\n')}\n</svg>`;
+}
+
+async function traceItem(it){
+  const code0 = tint(traceSVG(it), it), ev0 = await evalCode(code0, it);
+  return ev0.c ? await fitStroke(code0, it, ev0, false) : { code:code0, ev:ev0 };
+}
+$('tracebtn').onclick = async () => {
+  const it = cur; if(!it || busy) return;
+  lock(true);
+  try{
+    msg('Tracing centerlines...');
+    const tr = await traceItem(it), minM = (+$('minm').value || 0)/100;
+    commit(it, tr.code, tr.ev.score, 'local trace'); it.status = tr.ev.score >= minM ? 'done' : 'low'; it.err = '';
+    msg(`Traced locally (no API): match ${Math.round(tr.ev.score*100)}%.`); renderQueue();
+  }catch(e){ msg(e.message, true); }
+  lock(false);
+};
+
+// ---------- progress in the tab title + notification ----------
+const BASE_TITLE = document.title;
+const setProgress = (d, t) => { document.title = `Converting ${d}/${t} | ${BASE_TITLE}`; };
+function beep(){
+  try{ const ac = new (window.AudioContext || window.webkitAudioContext)(), o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination); o.frequency.value = 880; g.gain.value = 0.08; o.start(); setTimeout(() => { o.stop(); ac.close(); }, 200); }catch(e){}
+}
+function finishNotify(text){
+  document.title = `Done | ${BASE_TITLE}`;
+  if(!$('notify').checked) return;
+  beep();
+  try{ if(window.Notification && Notification.permission === 'granted' && document.hidden) new Notification('Icon to SVG', { body:text }); }catch(e){}
+}
+addEventListener('focus', () => { if(!busy) document.title = BASE_TITLE; });
+
+// ---------- split one image that contains several icons ----------
+function clusters(it, gap){
+  const { W, H, ink } = it, C = 8, gw = Math.ceil(W/C), gh = Math.ceil(H/C), occ = new Uint8Array(gw*gh), dil = new Uint8Array(gw*gh);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(ink[y*W+x]) occ[((y/C)|0)*gw + ((x/C)|0)] = 1;
+  const d = Math.max(1, Math.round(gap/C));
+  for(let gy=0;gy<gh;gy++) for(let gx=0;gx<gw;gx++) if(occ[gy*gw+gx])
+    for(let dy=-d;dy<=d;dy++) for(let dx=-d;dx<=d;dx++){ const nx = gx+dx, ny = gy+dy; if(nx>=0 && ny>=0 && nx<gw && ny<gh) dil[ny*gw+nx] = 1; }
+  const lab = new Int16Array(gw*gh).fill(-1); let n = 0;
+  for(let i=0;i<gw*gh;i++){
+    if(!dil[i] || lab[i] >= 0) continue;
+    const stack = [i]; lab[i] = n;
+    while(stack.length){ const c = stack.pop(), cx = c%gw, cy = (c/gw)|0;
+      for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){ const nx = cx+dx, ny = cy+dy; if(nx<0||ny<0||nx>=gw||ny>=gh) continue; const j = ny*gw+nx; if(dil[j] && lab[j] < 0){ lab[j] = n; stack.push(j); } } }
+    n++;
+  }
+  const boxes = Array.from({ length:n }, () => ({ x0:W, y0:H, x1:-1, y1:-1, px:0 })); let total = 0;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(ink[y*W+x]){
+    const b = boxes[lab[((y/C)|0)*gw + ((x/C)|0)]]; b.px++; total++;
+    if(x<b.x0)b.x0=x; if(x>b.x1)b.x1=x; if(y<b.y0)b.y0=y; if(y>b.y1)b.y1=y;
+  }
+  const keep = boxes.filter(b => b.px >= Math.max(30, total*0.02)).map(b => ({ x0:b.x0, y0:b.y0, x1:b.x1+1, y1:b.y1+1, cy:(b.y0+b.y1)/2, h:b.y1-b.y0+1 }));
+  if(!keep.length) return [];
+  keep.sort((a,b) => a.cy - b.cy);
+  const medH = keep.map(b => b.h).sort((a,b) => a-b)[keep.length>>1], rows = [];
+  for(const b of keep){ const r = rows[rows.length-1]; if(r && b.cy - r.cy0 < medH*0.5) r.list.push(b); else rows.push({ cy0:b.cy, list:[b] }); }
+  return rows.flatMap(r => r.list.sort((a,b) => a.x0 - b.x0));
+}
+async function cropItem(it, bb, name){
+  const im = await loadImg(it.url);
+  const rc = it.rect || { sx:0, sy:0, sw:im.naturalWidth, sh:im.naturalHeight }, fx = rc.sw/it.W, fy = rc.sh/it.H;
+  const pad = Math.max(4, 0.06*Math.max(bb.x1-bb.x0, bb.y1-bb.y0));
+  const sx = Math.max(0, rc.sx + (bb.x0-pad)*fx), sy = Math.max(0, rc.sy + (bb.y0-pad)*fy);
+  const sw = Math.min(im.naturalWidth, rc.sx + (bb.x1+pad)*fx) - sx, sh = Math.min(im.naturalHeight, rc.sy + (bb.y1+pad)*fy) - sy;
+  const cap = Math.min(1, 1024/Math.max(sw, sh)), c = cv(Math.max(1, Math.round(sw*cap)), Math.max(1, Math.round(sh*cap)));
+  c.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  return makeItem(c.toDataURL('image/png'), name, it.res || +$('res').value, true);
+}
+async function splitItem(it){
+  const bx = clusters(it, +$('sgap2').value || 16); if(bx.length < 2) return null;
+  const base = it.name.replace(/\.[^.]+$/, ''), out = [];
+  for(let i=0;i<bx.length;i++) out.push(await cropItem(it, bx[i], `${base}-${i+1}.png`));
+  return out;
+}
+async function doSplit(it){
+  if(busy) return msg('Wait for the batch to finish before splitting.', true);
+  const parts = await splitItem(it);
+  if(!parts) return msg('Only one icon found in this image. Try a smaller "Split gap" if the icons are close together.', true);
+  const i = items.indexOf(it), wasCur = it === cur;
+  items.splice(i, 1, ...parts);
+  if(wasCur){ cur = null; pick(parts[0]); } else renderQueue();
+  msg(`Split into ${parts.length} icons.`);
+}
+
+// ---------- remember settings ----------
+const SET = ['rounds','res','fb','dec','sw24','pbg','ovo','rem','keepcol','crop','align','good','src','notify','autosplit','sgap2','minm','mode','conc','scols','scell','spad','sgap','sfit','ssw','sbg','slab'];
+try{ const g = JSON.parse(localStorage.getItem('gset')||'{}'); SET.forEach(id => { if(id in g){ const e = $(id); if(e.type === 'checkbox') e.checked = g[id]; else e.value = g[id]; } }); }catch(e){}
+SET.forEach(id => $(id).addEventListener('change', () => { const g = {}; SET.forEach(i => g[i] = $(i).type === 'checkbox' ? $(i).checked : $(i).value); try{ localStorage.setItem('gset', JSON.stringify(g)); }catch(e){} }));
+$('afterStage').className = 'stage ' + $('pbg').value;
+renderQueue();
+restore();
+</script>
+</body>
+</html>
